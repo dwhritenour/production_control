@@ -1,0 +1,287 @@
+components:
+- components:
+  - components: []
+    layout_properties: {full_width_row: false, grid_position: 'OISICE,JEPZLC'}
+    name: flow_buttons
+    properties:
+      spacing:
+        margin: ['0', null, '0', null]
+    type: FlowPanel
+  - components:
+    - event_bindings: {}
+      layout_properties: {grid_position: 'HDTQCU,PMOVUN'}
+      name: btn_refresh
+      properties:
+        align: left
+        font_size: 12
+        icon: fa:refresh
+        role: elevated-button
+        spacing:
+          padding: [null, '15', null, '15']
+        text: Refresh Work Orders
+      type: Button
+    - layout_properties: {grid_position: 'HDTQCU,TZAMLG'}
+      name: lbl_last_refreshed
+      properties: {align: left, font_size: 10, foreground: '#888888', icon: 'fa:refresh', italic: true, text: 'Last Refreshed: -- '}
+      type: Label
+    layout_properties: {grid_position: 'SJIBOS,CQCTEF'}
+    name: outlined_card_3
+    properties:
+      col_widths: '{"PMOVUN":15,"TZAMLG":45}'
+      role: outlined-card
+      spacing:
+        padding: ['4', null, '4', null]
+    type: ColumnPanel
+  - components:
+    - components:
+      - data_bindings: []
+        event_bindings: {}
+        layout_properties: {width: 183.5}
+        name: dd_status_filter
+        properties:
+          font_size: 12
+          include_placeholder: true
+          items: [All, Created, Released, Assigned, In Progress, Paused, Pending Changes]
+          margin: ['0', null, '0', null]
+          placeholder: Filter by Status
+        type: DropDown
+      - event_bindings: {}
+        layout_properties: {width: 217}
+        name: dd_sort
+        properties:
+          font_size: 12
+          include_placeholder: true
+          items: [Created Date (Newest), Due Date (Earliest), SO# (Ascending), 'WO# (Ascending) ', Part# (Ascending)]
+          margin: ['0', null, '0', null]
+          placeholder: 'Sort Ascending by:'
+        type: DropDown
+      - data_bindings: []
+        event_bindings: {}
+        layout_properties: {width: 245}
+        name: tb_search
+        properties:
+          font_size: 12
+          margin: ['0', null, '0', null]
+          placeholder: Search by SO#, Part#, or WO#
+        type: TextBox
+      - layout_properties: {}
+        name: btn_clear_filters
+        properties:
+          align: right
+          font_size: 12
+          icon: fa:times
+          role: elevated-button
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['0', '15', '0', '15']
+          text: Clear Filters
+        type: Button
+      layout_properties: {grid_position: 'BSSHLW,CWCQOT'}
+      name: flow_filters
+      properties: {}
+      type: FlowPanel
+    layout_properties: {grid_position: 'BECZZX,MBJGCD'}
+    name: outlined_card_1
+    properties:
+      role: outlined-card
+      spacing:
+        padding: ['4', null, '4', null]
+    type: ColumnPanel
+  - components:
+    - components:
+      - components: []
+        layout_properties: {}
+        name: lbl_created_count
+        properties:
+          bold: true
+          border: '1px solid #2196F3'
+          font_size: 12
+          foreground: '#2196F3'
+          spacing:
+            padding: ['3', '4', null, '4']
+          text: 'Created: 0'
+        type: Link
+      - components: []
+        layout_properties: {}
+        name: lbl_released_count
+        properties:
+          bold: true
+          border: '1px solid #00897B'
+          font_size: 12
+          foreground: '#00897B'
+          spacing:
+            padding: ['3', '4', null, '4']
+          text: 'Released: 0'
+        type: Link
+      - layout_properties: {}
+        name: lbl_assigned_count
+        properties:
+          bold: true
+          border: '1px solid #607D8B'
+          font_size: 12
+          foreground: '#607D8B'
+          spacing:
+            padding: ['3', '4', null, '4']
+          text: 'Assigned: 0'
+        type: Link
+      - components: []
+        layout_properties: {}
+        name: lbl_in_progress_count
+        properties:
+          bold: true
+          border: '1px solid #FF9800'
+          font_size: 12
+          foreground: '#FF9800'
+          spacing:
+            padding: ['3', '4', null, '4']
+          text: 'In Progress: 0'
+        type: Link
+      - layout_properties: {}
+        name: lk_rush_count
+        properties:
+          bold: true
+          border: '1px solid #E65100'
+          font_size: 12
+          foreground: '#E65100'
+          spacing:
+            padding: ['3', '4', null, '4']
+          text: 'Rush: 0'
+        type: Link
+      - components: []
+        layout_properties: {}
+        name: lbl_paused_count
+        properties:
+          bold: true
+          border: '1px solid #C62828'
+          font_size: 12
+          foreground: '#C62828'
+          spacing:
+            padding: ['3', '4', null, '4']
+          text: 'Paused: 0'
+        type: Link
+      - layout_properties: {}
+        name: lbl_changes_count
+        properties:
+          bold: true
+          border: '1px solid #7B2FBE'
+          font_size: 12
+          foreground: '#7B2FBE'
+          spacing:
+            padding: ['3', '4', null, '4']
+          text: 'Changes: 0'
+        type: Link
+      - layout_properties: {}
+        name: lbl_record_count
+        properties:
+          align: right
+          font_size: 12
+          foreground: '#888888'
+          icon: fa:arrow-right
+          spacing:
+            margin: ['0', null, '0', null]
+          text: 0 work orders
+        type: Label
+      layout_properties: {grid_position: 'MRFYSG,RIFPHZ'}
+      name: flow_summary
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '4', null]
+      type: FlowPanel
+    layout_properties: {grid_position: 'DDZETE,CGGQUP'}
+    name: outlined_card_2
+    properties:
+      role: outlined-card
+      spacing:
+        padding: ['4', null, '4', null]
+    type: ColumnPanel
+  - components:
+    - layout_properties: {}
+      name: repeating_panel_1
+      properties: {item_template: work_orders_condensed.CondensedRowTemplate}
+      type: RepeatingPanel
+    data_bindings: []
+    layout_properties: {full_width_row: false, grid_position: 'TRVFKH,LFNVUC'}
+    name: grid_active
+    properties:
+      columns:
+      - {data_key: '', expand: false, id: JKSDUP, title: WO#, width: '120'}
+      - {data_key: '', expand: false, id: VJQQOR, title: Status, width: '190'}
+      - {data_key: '', id: OJLQEN, title: SO#, width: '105'}
+      - {data_key: '', id: NTNWAU, title: Part Number / Straining Element, width: '180'}
+      - {data_key: '', id: CFDXLR, title: SO Qty, width: '65'}
+      - {data_key: '', id: EXQTUZ, title: New Qty, width: '75'}
+      - {data_key: '', expand: false, id: PBWTKO, title: WO Due Date, width: '130'}
+      - {data_key: '', id: SVOJTH, title: SO Due Date, width: '100'}
+      margin: [null, '0', null, '0']
+      role: [horizontal-scroll, tonal-data-grid]
+      rows_per_page: 15
+      show_page_controls: false
+    type: DataGrid
+  - components:
+    - components:
+      - layout_properties: {}
+        name: lk_first
+        properties: {font_size: 12, foreground: '#888888', italic: true}
+        type: Link
+      - components: []
+        layout_properties: {}
+        name: lk_prev
+        properties: {font_size: 12, foreground: '#888888', italic: true}
+        type: Link
+      - layout_properties: {}
+        name: lbl_paging
+        properties: {font_size: 12, foreground: '#888888', italic: true}
+        type: Label
+      - components: []
+        layout_properties: {}
+        name: lk_next
+        properties: {font_size: 12, foreground: '#888888', italic: true}
+        type: Link
+      - layout_properties: {}
+        name: lk_last
+        properties: {font_size: 12, foreground: '#888888', italic: true}
+        type: Link
+      layout_properties: {grid_position: 'PSRWAZ,SFXLXD'}
+      name: flow_panel_1
+      properties:
+        align: right
+        border: ''
+        spacing:
+          margin: ['0', null, '0', null]
+      type: FlowPanel
+    layout_properties: {grid_position: 'RKOMHF,BSIIHU'}
+    name: outlined_card_4
+    properties:
+      border: '1px solid #E7E0EC'
+      role: outlined-card
+      spacing:
+        padding: ['0', null, '0', null]
+    type: ColumnPanel
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {col_widths: '{"LFNVUC":35}'}
+  type: ColumnPanel
+- layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: title}
+  name: lbl_title
+  properties:
+    bold: false
+    font_size: null
+    role: title
+    spacing:
+      margin: ['5', null, null, null]
+      padding: ['8', null, null, null]
+    text: Work Orders - Straining Element Department
+  type: Label
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

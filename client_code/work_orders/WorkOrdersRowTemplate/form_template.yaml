@@ -1,0 +1,95 @@
+components:
+- components:
+  - event_bindings: {}
+    layout_properties: {}
+    name: btn_release
+    properties:
+      font_size: 11
+      icon: fa:play
+      role: elevated-button
+      spacing:
+        margin: ['4', null, '5', null]
+        padding: ['0', '20', '0', '20']
+      text: Release
+    type: Button
+  - event_bindings: {}
+    layout_properties: {}
+    name: btn_cancel
+    properties:
+      font: ''
+      font_size: 11
+      icon: fa:times-circle
+      role: elevated-button
+      spacing:
+        margin: ['4', null, '5', null]
+        padding: ['0', '10', '0', '10']
+      text: Cancel
+    type: Button
+  - layout_properties: {}
+    name: btn_print
+    properties:
+      font_size: 11
+      icon: fa:print
+      role: elevated-button
+      spacing:
+        margin: ['4', null, '5', null]
+        padding: ['0', '20', '0', '20']
+      text: Print
+    type: Button
+  layout_properties: {column: BXEPWR}
+  name: flow_actions
+  properties: {align: center}
+  type: FlowPanel
+- components:
+  - layout_properties: {}
+    name: lbl_status
+    properties:
+      spacing:
+        margin: ['8', null, null, null]
+        padding: ['0', null, '0', null]
+    type: Label
+  - layout_properties: {}
+    name: lbl_change_badge
+    properties:
+      align: center
+      background: '#FF9800'
+      col_spacing: none
+      font_size: 10
+      foreground: '#FFFFFF'
+      icon: ''
+      role: change-badge
+      spacing:
+        margin: ['0', null, '0', null]
+        padding: [0, '5', null, '5']
+    type: Link
+  layout_properties: {column: VJQQOR}
+  name: flow_status
+  properties: {}
+  type: FlowPanel
+- layout_properties: {column: SVOJTH}
+  name: lbl_due_date
+  properties: {}
+  type: Label
+- layout_properties: {column: BDHJXT}
+  name: link_notes
+  properties: {}
+  type: Link
+- layout_properties: {column: JKSDUP}
+  name: link_wo_number
+  properties: {role: null}
+  type: Link
+- event_bindings: {}
+  layout_properties: {column: EXQTUZ}
+  name: tb_override_qty
+  properties: {placeholder: --}
+  type: TextBox
+- layout_properties: {column: OJLQEN}
+  name: link_so_number
+  properties: {}
+  type: Link
+- layout_properties: {column: PBWTKO}
+  name: dp_wo_due_date
+  properties: {}
+  type: DatePicker
+container: {type: DataRowPanel}
+is_package: true

@@ -1,0 +1,70 @@
+allow_embedding: false
+correct_dependency_ids: {}
+dependencies: []
+metadata: {description: 'Allows approval, rejecting and editing transfers.', title: Transfer Recommendations}
+name: Clone of Transfer Dashboard
+package_name: Transfer_Dashboard
+renamed: true
+runtime_options:
+  client_version: '3'
+  legacy_features: {bootstrap3: true, class_names: true}
+  server_persist: true
+  server_spec: {base: python310-minimal}
+  version: 3
+scheduled_tasks:
+- job_id: YFFONBHP
+  task_name: run_transfer_review
+  time_spec:
+    at: {}
+    every: minute
+    n: 15
+- job_id: WHCFNIPR
+  task_name: scheduled_stale_cleanup
+  time_spec:
+    at: {}
+    every: minute
+    n: 10
+secrets:
+  ANTHROPIC_API_KEY:
+    type: secret
+    value: {YZKHSLAJLM2Q2MKE: 247LD/jLlghyaQpSK5fEbImgcdDeA/C83GC/X73lOLHOCcTLWHRc3RYsjw+EE3vLbSTKx5oWldUxNGMbcU19oR+qbiJ5+tzC9N+XYlWwwxu4Ruli6iGTw7IFxkWMFX4Ac8KkB3j6VqpzbpqiCsCkPEUTi/ExOegoW11D8wHAGBosLb9pcGYHZB/y9r+Ms7djzJVm5a1+Eud4+Ub2fXT8BDGzxQo+ljxe3wZ30fy/DFSJ9PEiFM4cdjjfAlmzfpIh1NmZrSNVnKet4kI=}
+  ElevenLabs:
+    type: secret
+    value: {YZKHSLAJLM2Q2MKE: ankF+9shJRXkyv6Z+t22qkDqvn7Dn/Z4CRr1WniRv2233hoLV9PrlOouflQZF+ksa7a3DGiwY8Nqo0dMvB0trDoeWtsGUZ41FAYOdW8IC9Jg3bAOJ/Ykz4jIV5qwAJ9Z2+QYTjGgoukbEqJYBaT28twL/2XJSYD0UMpWp6qDQfcHkxvwA5kin5xJwQnkEZU8NkQ=}
+  HUB_MANAGER_EMAIL:
+    type: secret
+    value: {YZKHSLAJLM2Q2MKE: p90NqDeOCG+FVg21jNubob6modKp6YD2PYzh9/qC7TBY99QO61eYqQAlSkB8qtQV5MYYPFRaSnHmEPsCG/yHC+416zoWi084lxZF7fXKBtqtdvhCYqkKtqdgvV/gPHyhZdhzzO+te3R2z+cz3gnFd1QV2u1PooE1WAE=}
+  NEXUS_DATABASE:
+    type: secret
+    value: {YZKHSLAJLM2Q2MKE: Of+7rp2I04IgVmkNv0fJxZIoPS2rqruvo5IO9qL6ZcwJ7rlmwNCYSllCcy2vZNik7rLsB0urypwRaRrJmFGH8a5AUl+dh9J/Dp8/31qA0i69/pxSQR4Ep8GkULQ9UR7/aMNjhQ==}
+  NEXUS_PASSWORD:
+    type: secret
+    value: {YZKHSLAJLM2Q2MKE: pPm0WFJx0p0g5ZZ1Mkcb02x8+VCs7yu1DVsPsLMh+BjoP2LeCQwI5S4/Q/bawfi9GnkhEVB5Aq4B+xYeOT0fuubNZ4frlUH9O1OKD0PYVVzmrIO3HO+2oLJdqJcjE+CLll9yy+qrF327uAE=}
+  NEXUS_SERVER:
+    type: secret
+    value: {YZKHSLAJLM2Q2MKE: BFUV5Y9Z7gPF8vTYZG2tZk2bTvr/XfebxG5As6ucakCBFEM06j/g9EvDp7bwNKJie3bkAKfestoSEsl8POqpKo4ElAWTT1aAsGcM+fgKv5ZiNuKA5LHKiDa/UiDHWSNkarCNu/OqIaK7sbNG}
+  NEXUS_USERNAME:
+    type: secret
+    value: {YZKHSLAJLM2Q2MKE: zYLEjwDzo2/a874i4gefbHa6Z2DqpxKAP20s9nryXa9RtsuUglM0ED2CXliNEP1R0hze2R3yQPc3YmAl+gKrFjxH0C++1bAXfQUSMccP0dGNlwtWZCNtp0i6ya/z4J3aYCODC1OnJA8=}
+  TWILIO_ACCOUNT_SID:
+    type: secret
+    value: {YZKHSLAJLM2Q2MKE: OMXERWHlTevXIuLDUOyXx81HRvbhGV98fkPQmr4a+VlgINJUgtWUF931cAzI7NYpREkHnZY6THW2PuiRTleAoKfZ7z2opsxwFdx3ZrxVYII+nqpxM4q5zLdiWy8maSn/cIeZ9lGnrt3ARrPwejTNAYFHVXQ3c1AjaHzY/Hs3xhVc}
+  TWILIO_AUTH_TOKEN:
+    type: secret
+    value: {YZKHSLAJLM2Q2MKE: J/RPez6i5lJhyo6j9dC7gbHnFLw9uz9FvEG9OwS8FxSBQn8aZViyCWRbAROFmIS41Z+QBFf7UVrIEtyrZVfiBW2+3wP5ZFuz5nVKG3lffggZY8GY7X8CHKgfUKEwJJjxa39UOzHn8TlZEeE64hDlltRSD4cvFb0yZ2UGFRG1Pw==}
+  TWILIO_PHONE_NUMBER:
+    type: secret
+    value: {YZKHSLAJLM2Q2MKE: rztKrbGDfQf1Sm9JvkExGnL8dN0cP99da1+VDYSfO+ka0kOQ/zrwbmmq9cHcfIymY+N3a+n9GVM4Cfv5CThp/g79BUE+Y0NWkx4xcYQcSSFzKTjxNXEftAlknDGNMyVLOT+R8VnWQTw1zQ4=}
+services:
+- client_config: {}
+  server_config: {}
+  source: /runtime/services/tables.yml
+- client_config: {}
+  server_config: {}
+  source: /runtime/services/anvil/email.yml
+- client_config: {}
+  server_config: {}
+  source: /runtime/services/anvil/secrets.yml
+startup: {module: transfer_recs, type: form}
+startup_form: null
+uplink_visible: true

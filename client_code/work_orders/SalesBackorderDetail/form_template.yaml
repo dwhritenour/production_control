@@ -1,0 +1,46 @@
+components:
+- layout_properties: {grid_position: 'DOSVDY,ATUVQA'}
+  name: lbl_header
+  properties: {bold: true, font_size: 16}
+  type: Label
+- layout_properties: {grid_position: 'SGESYR,MWJLCM'}
+  name: lbl_carrier
+  properties:
+    spacing:
+      margin: ['0', null, '0', null]
+      padding: ['0', null, '0', null]
+    text: 'Carrier: '
+  type: Label
+- layout_properties: {grid_position: 'PCICZP,ZCBZHS'}
+  name: lbl_mos
+  properties:
+    spacing:
+      margin: ['0', null, '0', null]
+      padding: ['0', null, '0', null]
+    text: 'MOS:  '
+  type: Label
+- components:
+  - layout_properties: {}
+    name: rp_backorders
+    properties:
+      background: '#F5F5F5'
+      item_template: work_orders.SalesBackorderDetail.BackorderRowTemplate
+      margin: ['0', null, '0', null]
+    type: RepeatingPanel
+  layout_properties: {grid_position: 'IWJQQA,UEYOKO'}
+  name: grid_backorders
+  properties:
+    columns:
+    - {data_key: max_release, id: JKSDUP, title: Max Release, width: '150'}
+    - {data_key: item_number, id: VJQQOR, title: Line Item, width: '90'}
+    - {data_key: sku, id: OJLQEN, title: SKU, width: '175'}
+    - {data_key: quantity, id: GTCYTI, title: Qty, width: '80'}
+    - {data_key: balance_due, id: SKGRNW, title: Balance Due, width: '120'}
+    - {data_key: total_qty_shipped, id: XDMDEZ, title: Total Shipped, width: '120'}
+    - {data_key: '', id: QFTMZI, title: Status, width: '100'}
+    role: null
+  type: DataGrid
+container:
+  properties: {col_widths: '{"SZKTYR":15}'}
+  type: ColumnPanel
+is_package: true

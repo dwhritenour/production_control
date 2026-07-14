@@ -1,0 +1,231 @@
+components:
+- components:
+  - components:
+    - layout_properties: {grid_position: 'UBEOLH,STRZTA'}
+      name: lbl_title
+      properties:
+        bold: true
+        font_size: 22
+        icon: fa:check-circle
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Forecast Accuracy
+      type: Label
+    - layout_properties: {grid_position: 'UBEOLH,LEAOVI'}
+      name: btn_refresh
+      properties: {align: right, role: elevated-button, text: Refresh}
+      type: Button
+    - layout_properties: {grid_position: 'RLELLG,GCQEEB'}
+      name: lbl_year
+      properties:
+        font_size: 13
+        foreground: '#666'
+        italic: true
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Target: - '
+      type: Label
+    layout_properties: {grid_position: 'WLJGMS,TTGMLS'}
+    name: oc_header
+    properties: {role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - layout_properties: {grid_position: 'OLLJBL,RABNRI PMPNJM,EZXHIA'}
+      name: lbl_batch
+      properties: {bold: true, text: 'Batch:'}
+      type: Label
+    - layout_properties: {grid_position: 'OLLJBL,RABNRI PETUUI,CEHYGN'}
+      name: lbl_from
+      properties: {bold: true, text: 'From:'}
+      type: Label
+    - layout_properties: {grid_position: 'OLLJBL,GARNPL YLANGL,HQBVUP'}
+      name: dd_batch
+      properties: {}
+      type: DropDown
+    - layout_properties: {grid_position: 'OLLJBL,GARNPL ZENLHZ,NRUQRG'}
+      name: dd_from_month
+      properties: {}
+      type: DropDown
+    - layout_properties: {grid_position: 'OLLJBL,GARNPL ZENLHZ,QSVERR'}
+      name: lbl_to
+      properties: {align: right, bold: true, text: 'To:'}
+      type: Label
+    - layout_properties: {grid_position: 'OLLJBL,GARNPL ZENLHZ,WUOWRL'}
+      name: dd_to_month
+      properties: {}
+      type: DropDown
+    - layout_properties: {grid_position: 'OLLJBL,GGPUGD'}
+      name: lbl_series
+      properties: {align: right, bold: true, text: 'Series:'}
+      type: Label
+    - layout_properties: {grid_position: 'OLLJBL,ZKVOUI UFJREG,YVGWGP'}
+      name: dd_series_filter
+      properties: {}
+      type: DropDown
+    - layout_properties: {grid_position: 'OLLJBL,ZKVOUI WVDRZZ,MSLTMJ'}
+      name: cb_outliers_only
+      properties:
+        spacing:
+          margin: ['15', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Outliers Only
+      type: CheckBox
+    layout_properties: {grid_position: 'HTKTXX,JMLOVT'}
+    name: oc_filters
+    properties: {col_widths: '{"RABNRI":5,"GARNPL":25,"GGPUGD":10,"ZKVOUI":20,"NRUQRG":25,"QSVERR":10,"WUOWRL":25}', role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - layout_properties: {grid_position: 'SRHGDA,YRAZRB OHUHYT,PTUFRO'}
+      name: lbl_sku_count
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'SKU-months: -'
+      type: Label
+    - layout_properties: {grid_position: 'SRHGDA,YRAZRB FZDBVQ,ECBRJD'}
+      name: lbl_outliers
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Outliers: -'
+      type: Label
+    - layout_properties: {grid_position: 'SRHGDA,YRAZRB HQNVCD,VCCOXC'}
+      name: lbl_bias
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Bias: -'
+      type: Label
+    - layout_properties: {grid_position: 'SRHGDA,IAQQZE ACISNV,HADMOI'}
+      name: lbl_total_forecast
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Total forecast: -'
+      type: Label
+    - layout_properties: {grid_position: 'SRHGDA,IAQQZE WLWXAQ,CJKCAZ'}
+      name: lbl_total_actual
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Total actual: -'
+      type: Label
+    - layout_properties: {grid_position: 'SRHGDA,IAQQZE JLGITO,QKYEYT'}
+      name: lbl_mape
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'MAPE: -%'
+      type: Label
+    - layout_properties: {grid_position: 'SRHGDA,DJGIAS IYHBQV,NPPTEM'}
+      name: lbl_wmape
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'WMAPE: —%'
+      type: Label
+    - layout_properties: {grid_position: 'SRHGDA,DJGIAS CWGYIU,NWWFKJ'}
+      name: lbl_wmape_no_out
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'WMAPE (no outliers): —%'
+      type: Label
+    - layout_properties: {grid_position: 'SRHGDA,DJGIAS OMERVK,MHCGVK'}
+      name: lbl_blank
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+      type: Label
+    layout_properties: {grid_position: 'AIFHIH,BTCHEL'}
+    name: oc_summary
+    properties: {role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - layout_properties: {grid_position: 'DQDZAL,KROMTQ'}
+      name: plt_scatter
+      properties: {height: '440'}
+      type: Plot
+    layout_properties: {grid_position: 'JIMKMO,JAVUMP'}
+    name: oc_chart
+    properties: {role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - layout_properties: {grid_position: 'ILWTZJ,XCSMYK'}
+      name: btn_view_detail
+      properties: {align: left, icon: 'fa:list', role: elevated-button, text: Detail Rows}
+      type: Button
+    - layout_properties: {grid_position: 'ILWTZJ,JDKTOW'}
+      name: btn_view_series
+      properties: {align: left, icon: 'fa:object-group', role: elevated-button, text: Series Rollup}
+      type: Button
+    - layout_properties: {grid_position: 'HDBDYS,IAWIQB ILWTZJ,HXWATC'}
+      name: lbl_view_label
+      properties: {align: right, italic: true, text: Detail Rows - 0}
+      type: Label
+    - components:
+      - name: rp_detail
+        properties: {item_template: forecast_accuracy.DetialRowTemplate}
+        type: RepeatingPanel
+      layout_properties: {grid_position: 'VSYGCR,JFGCHF'}
+      name: dg_detail
+      properties:
+        columns:
+        - {data_key: sku, id: JKSDUP, title: SKU, width: '120'}
+        - {data_key: series, id: VJQQOR, title: Series, width: '120'}
+        - {data_key: forecast_month, id: OJLQEN, title: Month, width: '100'}
+        - {data_key: forecast_qty, id: UBSRKZ, title: Forecast, width: '100'}
+        - {data_key: actual_qty, id: RVAXUW, title: Actual, width: '100'}
+        - {data_key: variance, id: YPSAVK, title: Variance, width: '100'}
+        - {data_key: variance_pct, id: VICPYE, title: Var %, width: '100'}
+        - {data_key: accuracy_pct, id: AWZKSZ, title: Accuracy %, width: '100'}
+        - {data_key: is_outlier, id: OOSBGF, title: Outlier, width: '90'}
+        role: tonal-data-grid
+      type: DataGrid
+    - components:
+      - name: rp_series
+        properties: {item_template: forecast_accuracy.SeriesRowTemplate}
+        type: RepeatingPanel
+      layout_properties: {grid_position: 'MSDGTY,KICZKW'}
+      name: dg_series
+      properties:
+        columns:
+        - {data_key: series, id: JKSDUP, title: Series}
+        - {data_key: sku_count, id: VJQQOR, title: SKUs}
+        - {data_key: total_forecast, id: OJLQEN, title: Total Forecast}
+        - {data_key: total_actual, id: IRRQDM, title: Total Actual}
+        - {data_key: bias, id: APRZZL, title: Bias}
+        - {data_key: wmape, id: FYPBED, title: WMAPE %}
+        role: tonal-data-grid
+      type: DataGrid
+    layout_properties: {grid_position: 'JXUDDP,ABXAWR'}
+    name: oc_grid
+    properties: {col_widths: '{"XCSMYK":15,"JDKTOW":25,"HXWATC":20}', role: outlined-card}
+    type: ColumnPanel
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {}
+  type: ColumnPanel
+- layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

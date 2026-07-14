@@ -1,0 +1,198 @@
+components:
+- data_bindings:
+  - {code: 'self.item[''days_to_ship'']', property: text, writeback: false}
+  layout_properties: {column: JKSDUP}
+  name: txt_days
+  properties:
+    align: center
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', '0', null, '0']
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''item_status_desc'']', property: text, writeback: false}
+  layout_properties: {column: VJQQOR}
+  name: txt_status
+  properties:
+    align: left
+    enabled: false
+    font_size: 11
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''order_release'']', property: text, writeback: false}
+  layout_properties: {column: OJLQEN}
+  name: txt_order_release
+  properties:
+    align: left
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''item_no'']', property: text, writeback: false}
+  layout_properties: {column: ZDGJME}
+  name: txt_item
+  properties:
+    align: right
+    enabled: false
+    font_size: 11
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''sku'']', property: text, writeback: false}
+  layout_properties: {column: HFZJOL}
+  name: txt_sku
+  properties:
+    align: left
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''description'']', property: text, writeback: false}
+  layout_properties: {column: MBPHTU}
+  name: txt_description
+  properties:
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''shipto_code'']', property: text, writeback: false}
+  layout_properties: {column: PZQJNJ}
+  name: txt_shipto
+  properties:
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''qty_ordered'']', property: text, writeback: false}
+  layout_properties: {column: QYSWVV}
+  name: txt_qty_ord
+  properties:
+    align: right
+    enabled: false
+    font_size: 11
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''qty_balance_due'']', property: text, writeback: false}
+  layout_properties: {column: QYYJPO}
+  name: txt_qty_bal
+  properties:
+    align: right
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''ship_by_date'']', property: text, writeback: false}
+  layout_properties: {column: JCLQST}
+  name: txt_ship_by
+  properties:
+    align: right
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''due_date'']', property: text, writeback: false}
+  layout_properties: {column: ZCFUSZ}
+  name: txt_due
+  properties:
+    align: right
+    enabled: false
+    font_size: 11
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''starlite_on_hand'']', property: text, writeback: false}
+  layout_properties: {column: SWBBFH}
+  name: txt_starlite_oh
+  properties:
+    align: right
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- layout_properties: {column: DVTCXX}
+  name: link_wo
+  properties:
+    align: center
+    icon: fa:wrench
+    spacing:
+      margin: ['8', null, null, null]
+    visible: false
+  type: Link
+- layout_properties: {column: XAWAPR}
+  name: link_details
+  properties:
+    align: center
+    font_size: null
+    icon: fa:info-circle
+    spacing:
+      margin: ['8', null, null, null]
+    text: Order Details
+  type: Link
+- data_bindings:
+  - {code: 'self.item[''hub_on_hand'']', property: text, writeback: false}
+  layout_properties: {column: JQLLVP}
+  name: txt_hub_oh
+  properties:
+    align: right
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''header_create_date'']', property: text, writeback: false}
+  layout_properties: {column: NGPSKT}
+  name: txt_header_create_date
+  properties:
+    align: right
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+    text: ''
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''nx_carrier'']', property: text, writeback: false}
+  layout_properties: {column: UAMTNM}
+  name: txt_carrier
+  properties:
+    enabled: false
+    font_size: 11
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''nx_mos'']', property: text, writeback: false}
+  layout_properties: {column: TCODYR}
+  name: txt_mos
+  properties:
+    enabled: false
+    font_size: 12
+    foreground: '#0A0A0A'
+    margin: ['8', null, null, null]
+  type: TextBox
+container:
+  properties:
+    margin: ['0', null, '0', null]
+  type: DataRowPanel
+is_package: true

@@ -1,0 +1,254 @@
+components:
+- components:
+  - layout_properties: {full_width_row: true, grid_position: 'OIKTMG,RRXGPL'}
+    name: lbl_title
+    properties: {role: title, text: Sales Orders Due}
+    type: Label
+  - components:
+    - components:
+      - layout_properties: {}
+        name: btn_refresh
+        properties: {align: left, icon: 'fa:refresh', role: elevated-button, text: Refresh Sales Orders}
+        type: Button
+      - layout_properties: {}
+        name: btn_export_excel
+        properties: {align: left, icon: 'fa:file-excel-o', role: elevated-button, text: Export Excel Sheet}
+        type: Button
+      - layout_properties: {}
+        name: lbl_last_refreshed
+        properties: {align: left, font_size: 10, foreground: '#888888', icon: 'fa:refresh', italic: true, role: null, text: 'Last Refreshed: --'}
+        type: Label
+      - layout_properties: {}
+        name: lbl_footer_source
+        properties: {align: left, font_size: 11, foreground: '#888888', italic: true, text: '-- Source: e21 Sales Orders — refreshed every 15 minutes --'}
+        type: Label
+      layout_properties: {full_width_row: true, grid_position: 'TLUKDD,MJOJQX'}
+      name: flow_panel_1
+      properties:
+        spacing:
+          margin: [-2, null, '0', null]
+      type: FlowPanel
+    layout_properties: {full_width_row: true, grid_position: 'OJOKQK,TJSHFS'}
+    name: oc_header
+    properties:
+      col_widths: '{}'
+      role: outlined-card
+      spacing:
+        padding: ['4', null, '4', null]
+    type: ColumnPanel
+  - components:
+    - components:
+      - components: []
+        layout_properties: {}
+        name: lk_late_ship_count
+        properties:
+          bold: true
+          border: '1px solid #D32F2F'
+          foreground: '#D32F2F  '
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['4', '10', null, '10']
+          text: 'Late (Ship): 0'
+        type: Link
+      - components: []
+        layout_properties: {}
+        name: lk_due_today_count
+        properties:
+          bold: true
+          border: '1px solid #FF9800 '
+          foreground: '#FF9800  '
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['4', '10', null, '10']
+          text: 'Due Today: 0'
+        type: Link
+      - components: []
+        layout_properties: {}
+        name: lk_due_7_count
+        properties:
+          bold: true
+          border: '1px solid #FF9800'
+          foreground: '#FFB300  '
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['4', '10', null, '10']
+          text: 'Due in 7 Days: 0'
+        type: Link
+      - components: []
+        layout_properties: {}
+        name: lk_on_hold_count
+        properties:
+          bold: true
+          border: '1px solid #7B2FBE'
+          foreground: '#7B2FBE  '
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['4', '10', null, '10']
+          text: 'On Hold: 0'
+        type: Link
+      - layout_properties: {}
+        name: lk_rush_count
+        properties:
+          bold: true
+          border: '1px solid #E65100'
+          foreground: '#E65100'
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['4', '10', null, '10']
+          text: 'Rush Jobs: 0'
+        type: Link
+      - components: []
+        layout_properties: {}
+        name: lk_diverged_count
+        properties:
+          bold: true
+          border: '1px solid #455A64 '
+          foreground: '#455A64  '
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['4', '10', null, '10']
+          text: 'Diverged Dates: 0'
+        type: Link
+      - layout_properties: {}
+        name: lk_ship_by_stale_count
+        properties:
+          bold: true
+          border: '1px solid #B3261E'
+          foreground: '#B3261E'
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['4', '10', null, '10']
+          text: 'Stale Ship-By: 0'
+          tooltip: Ship-by has passed but due is still in the future — likely needs updating in e21
+        type: Link
+      - layout_properties: {}
+        name: lbl_aging_summary
+        properties:
+          align: right
+          bold: false
+          font_size: 12
+          spacing:
+            padding: [null, '4', null, '4']
+          text: 'Aging — 1-7d: 0 |  8-30d: 0  | 31+d: 0'
+        type: Label
+      - layout_properties: {}
+        name: lbl_record_count
+        properties: {align: right, font_size: 12, foreground: '#666666  ', icon: 'fa:arrow-right', text: 0 lines |  0 qty open}
+        type: Label
+      layout_properties: {full_width_row: true, grid_position: 'CVLEHX,BSGONK'}
+      name: flow_summary
+      properties: {}
+      type: FlowPanel
+    layout_properties: {full_width_row: true, grid_position: 'OTJXDH,NSKFHW'}
+    name: outlined_card_1
+    properties:
+      role: outlined-card
+      spacing:
+        padding: ['4', null, '4', null]
+    type: ColumnPanel
+  - components:
+    - components:
+      - layout_properties: {width: 240}
+        name: dd_view_mode
+        properties:
+          items: [Late + Next 7 Days, Late Only, Due Today, Next 30 Days, All Open, Custom Range]
+        type: DropDown
+      - data_bindings: []
+        layout_properties: {}
+        name: dp_custom_start
+        properties: {font_size: 14, visible: false}
+        type: DatePicker
+      - layout_properties: {}
+        name: dp_custom_end
+        properties: {font_size: 14, visible: false}
+        type: DatePicker
+      - layout_properties: {width: 246.5}
+        name: dd_status_filter
+        properties:
+          items: [All, Allocated, Entered, Hold, Committed, Material Received/Shipped]
+        type: DropDown
+      - layout_properties: {width: 226}
+        name: tb_search
+        properties: {font_size: 14, placeholder: Search SKU / SO# / Ship-To, text: ''}
+        type: TextBox
+      - layout_properties: {width: 176}
+        name: dp_created_on
+        properties: {align: center, font_size: 14, placeholder: SO Create Date}
+        type: DatePicker
+      - layout_properties: {}
+        name: cb_rush_only
+        properties: {text: Rush Only⚡}
+        type: CheckBox
+      - layout_properties: {}
+        name: cb_diverged_only
+        properties: {text: Diverged Dates ⚑, tooltip: Show only lines where ship-by has passed but due is still future}
+        type: CheckBox
+      - layout_properties: {}
+        name: cb_ship_by_stale_only
+        properties: {text: Stale Ship-By ⏱}
+        type: CheckBox
+      - layout_properties: {}
+        name: cb_committed_only
+        properties: {text: Shippable (allocated ≥ balance)}
+        type: CheckBox
+      - layout_properties: {}
+        name: btn_clear_filters
+        properties: {align: right, icon: 'fa:times', role: elevated-button, text: Clear Filters}
+        type: Button
+      layout_properties: {full_width_row: true, grid_position: 'IYUZQK,FQNVDL'}
+      name: flow_filters
+      properties: {}
+      type: FlowPanel
+    layout_properties: {full_width_row: true, grid_position: 'EYDGPZ,ZMPWFF'}
+    name: outlined_card_2
+    properties:
+      role: outlined-card
+      spacing:
+        padding: ['4', null, '4', null]
+    type: ColumnPanel
+  - components:
+    - name: rp_lines
+      properties: {item_template: sales_orders_due.SalesOrdersDueRowTemplate}
+      type: RepeatingPanel
+    data_bindings: []
+    layout_properties: {full_width_row: true, grid_position: 'VBLIYH,SKQUNW'}
+    name: dg_lines
+    properties:
+      columns:
+      - {data_key: days_to_ship, id: JKSDUP, title: Days to Ship, width: '100'}
+      - {data_key: item_status_desc, id: VJQQOR, title: Status, width: '180'}
+      - {data_key: order_release, id: OJLQEN, title: 'Order #', width: '140'}
+      - {data_key: item_no, id: ZDGJME, title: Item, width: '70'}
+      - {data_key: sku, id: HFZJOL, title: SKU, width: '240'}
+      - {data_key: description, id: MBPHTU, title: Description, width: '220'}
+      - {data_key: shipto_code, id: PZQJNJ, title: Ship-To, width: '220'}
+      - {data_key: nx_carrier, id: UAMTNM, title: Carrier, width: '80'}
+      - {data_key: nx_mos, id: TCODYR, title: MOS, width: '100'}
+      - {data_key: qty_ordered, id: QYSWVV, title: Qty Ord, width: '100'}
+      - {data_key: qty_balance_due, id: QYYJPO, title: Qty Bal Due, width: '100'}
+      - {data_key: starlite_on_hand, id: SWBBFH, title: On Hand (Starlite), width: '110'}
+      - {data_key: hub_on_hand, id: JQLLVP, title: On Hand (Hub), width: '110'}
+      - {data_key: header_create_date, id: NGPSKT, title: SO Header Create Date, width: '150'}
+      - {data_key: ship_by_date, id: JCLQST, title: SKU Ship By, width: '150'}
+      - {data_key: due_date, id: ZCFUSZ, title: SKU Due Date, width: '150'}
+      - {data_key: wo_link, id: DVTCXX, title: WO Link, width: '200'}
+      - {data_key: '', expand: true, id: XAWAPR, title: Details Link, width: '160'}
+      role: [tonal-data-grid, horizontal-scroll]
+      rows_per_page: 25
+    type: DataGrid
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {}
+  type: ColumnPanel
+- layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

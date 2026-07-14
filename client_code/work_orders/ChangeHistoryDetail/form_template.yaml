@@ -1,0 +1,44 @@
+components:
+- components:
+  - layout_properties: {grid_position: 'DKZHZT,ZTPTJE'}
+    name: lbl_header
+    properties:
+      bold: true
+      font_size: 16
+      spacing:
+        margin: ['7', null, null, null]
+        padding: ['0', '7', '0', '7']
+    type: Label
+  - layout_properties: {grid_position: 'FHVWMN,XZXJKQ'}
+    name: lbl_summary
+    properties:
+      bold: true
+      font_size: 16
+      spacing:
+        margin: ['0', '0', '7', '0']
+        padding: ['0', '7', '0', '7']
+    type: Label
+  - layout_properties: {grid_position: 'PHSUNX,GDYXJT'}
+    name: rt_changes
+    properties:
+      font_size: 14
+      spacing:
+        padding: [null, '7', null, '7']
+      visible: true
+    type: RichText
+  - layout_properties: {grid_position: 'GGJZMT,XTOKFJ'}
+    name: btn_acknowledge
+    properties:
+      icon: fa:check
+      role: elevated-button
+      spacing:
+        margin: ['10', null, '10', null]
+      text: Acknowledge Changes
+      visible: true
+    type: Button
+  layout_properties: {grid_position: 'IFZXJK,FZYUSQ'}
+  name: panel_detail
+  properties: {background: '#F5F5F5', border: '1px solid #CCCCCC', col_widths: '{}', visible: true}
+  type: ColumnPanel
+container: {type: ColumnPanel}
+is_package: true

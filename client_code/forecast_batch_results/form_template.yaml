@@ -1,0 +1,106 @@
+components:
+- components:
+  - components:
+    - layout_properties: {grid_position: 'WFORNZ,MPTIBY FBQJVY,EJIXVS'}
+      name: lbl_title
+      properties: {bold: true, font_size: 22, icon: 'fa:object-group', text: Batch Results}
+      type: Label
+    - layout_properties: {grid_position: 'WFORNZ,MPTIBY GAZCFB,FFWCSH'}
+      name: lbl_header_year
+      properties: {font_size: 13, foreground: '#666', italic: true, text: 'Target Year: -'}
+      type: Label
+    - layout_properties: {grid_position: 'WFORNZ,ONTTPP'}
+      name: btn_refresh
+      properties: {align: right, icon: 'fa:refresh', role: elevated-button, text: Refresh}
+      type: Button
+    layout_properties: {grid_position: 'EDAOLV,IPPXJI'}
+    name: oc_header
+    properties: {role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - layout_properties: {grid_position: 'TFAYXG,VLEPIG RQCXKP,EULQJI'}
+      name: lbl_batch
+      properties: {bold: true, text: 'Batch:'}
+      type: Label
+    - layout_properties: {grid_position: 'TFAYXG,VLEPIG URYOZH,ACWNQP'}
+      name: lbl_series
+      properties: {bold: true, text: 'Series:'}
+      type: Label
+    - layout_properties: {grid_position: 'TFAYXG,MRWROF QKZBTW,NJKHXP'}
+      name: dd_batch
+      properties:
+        items: ['[No batches available]']
+      type: DropDown
+    - layout_properties: {grid_position: 'TFAYXG,MRWROF WTNETO,WWBRXP'}
+      name: dd_series_filter
+      properties:
+        items: ['[All series]']
+      type: DropDown
+    - layout_properties: {grid_position: 'TFAYXG,NLAKCB HNOEGH,MUAXXU'}
+      name: lbl_sku
+      properties: {align: right, bold: true, text: 'SKU:'}
+      type: Label
+    - layout_properties: {grid_position: 'TFAYXG,NLAKCB BFMAUR,AGSUTJ'}
+      name: lbl_month
+      properties: {align: right, bold: true, text: 'Month:'}
+      type: Label
+    - layout_properties: {grid_position: 'TFAYXG,EEUNBV WDOGVM,WJJVNN'}
+      name: tb_sku_filter
+      properties: {placeholder: Filter by SKU}
+      type: TextBox
+    - layout_properties: {grid_position: 'TFAYXG,EEUNBV URTGBQ,VUVEQT'}
+      name: dd_month_filter
+      properties:
+        items: ['[All months]']
+      type: DropDown
+    - layout_properties: {grid_position: 'TFAYXG,EEUNBV KCYRWP,RXTQCN'}
+      name: lbl_record_count
+      properties: {align: right, italic: true, text: 0 Results}
+      type: Label
+    - layout_properties: {grid_position: 'TFAYXG,EEUNBV UGETYP,YOEYIL'}
+      name: btn_clear_filters
+      properties: {align: right, icon: 'fa:times', role: elevated-button, text: Clear}
+      type: Button
+    layout_properties: {grid_position: 'NLHFZW,DTVBKD'}
+    name: oc_filters
+    properties: {col_widths: '{"VLEPIG":5,"MRWROF":20,"NLAKCB":10,"EEUNBV":25,"YOEYIL":40}', role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - components:
+      - name: rp_results
+        properties: {item_template: forecast_batch_results.ResultsRowTemplate}
+        type: RepeatingPanel
+      layout_properties: {grid_position: 'CPTSWI,ULOZOR'}
+      name: dg_results
+      properties:
+        columns:
+        - {data_key: sku, id: JKSDUP, title: SKU, width: '140'}
+        - {data_key: series, id: VJQQOR, title: Series, width: '130'}
+        - {data_key: forecast_month, id: OJLQEN, title: Month, width: '100'}
+        - {data_key: forecast_qty, id: GTYNQQ, title: Forecast, width: '100'}
+        - {data_key: forecast_lower, id: EGCTSD, title: Lower, width: '100'}
+        - {data_key: forecast_upper, id: VDQDFB, title: Upper, width: '100'}
+        - {data_key: model_used, id: VBEBWY, title: Model, width: '130'}
+        - {data_key: confidence_level, id: HZUBKX, title: Confidence, width: '120'}
+        role: tonal-data-grid
+      type: DataGrid
+    layout_properties: {grid_position: 'TFHCUE,MOSYOE'}
+    name: oc_grid
+    properties: {role: outlined-card}
+    type: ColumnPanel
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {}
+  type: ColumnPanel
+- layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

@@ -1,0 +1,9 @@
+components:
+- layout_properties: {column: QFTMZI}
+  name: lbl_status
+  properties: {align: left}
+  type: Label
+container:
+  properties: {align: left, background: '#F5F5F5'}
+  type: DataRowPanel
+is_package: true

@@ -1,0 +1,76 @@
+components:
+- components:
+  - components:
+    - layout_properties: {grid_position: 'YUYPIO,JXPLZL'}
+      name: lbl_title
+      properties: {bold: true, font_size: 22, icon: 'fa:list-alt', text: Forecast Batches}
+      type: Label
+    - layout_properties: {grid_position: 'YUYPIO,FMOBZV'}
+      name: btn_refresh
+      properties: {align: right, icon: 'fa:refresh', role: elevated-button, text: Refresh}
+      type: Button
+    layout_properties: {grid_position: 'ZKFHAA,FTSRPR'}
+    name: oc_header
+    properties: {role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - layout_properties: {grid_position: 'XARECU,HGOHGI'}
+      name: lbl_year
+      properties: {bold: true, text: 'Year:'}
+      type: Label
+    - layout_properties: {grid_position: 'XARECU,TDNSZG'}
+      name: dd_year_filter
+      properties:
+        items: ['[All years]']
+      type: DropDown
+    - layout_properties: {grid_position: 'XARECU,OGEYUX'}
+      name: lbl_record_count
+      properties: {align: left, italic: true, text: 0 batches}
+      type: Label
+    layout_properties: {grid_position: 'ZKWUXP,PTLULK'}
+    name: oc_filter
+    properties: {col_widths: '{"HGOHGI":5,"TDNSZG":25,"OGEYUX":30}', role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - components:
+      - layout_properties: {}
+        name: rp_batches
+        properties: {item_template: forecast_dashboard.forecast_dashboard_row}
+        type: RepeatingPanel
+      layout_properties: {grid_position: 'YHDIRL,KMBYTL'}
+      name: dg_batches
+      properties:
+        columns:
+        - {data_key: batch_id, id: JKSDUP, title: Batch ID, width: '100'}
+        - {data_key: target_year, id: VJQQOR, title: Year, width: '100'}
+        - {data_key: status, id: OJLQEN, title: Status, width: '100'}
+        - {data_key: sku_count, id: YQAXUC, title: SKUs, width: '100'}
+        - {data_key: series_count, id: TFTKYY, title: Series, width: '100'}
+        - {data_key: training_start, id: HYBIEZ, title: Training Start, width: '100'}
+        - {data_key: training_end, id: NORWIG, title: Training End, width: '100'}
+        - {data_key: created_date, id: LMSIYJ, title: Created, width: '150'}
+        - {data_key: created_by, id: MDLWUG, title: By, width: '100'}
+        - {data_key: notes, id: XABWWR, title: Notes, width: '200'}
+        - {data_key: export, id: GPUSQJ, title: Export, width: '150'}
+        role: [horizontal-scroll, tonal-data-grid]
+      type: DataGrid
+    layout_properties: {grid_position: 'AHGPAX,GUMDAB'}
+    name: oc_grid
+    properties: {role: outlined-card}
+    type: ColumnPanel
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {}
+  type: ColumnPanel
+- layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

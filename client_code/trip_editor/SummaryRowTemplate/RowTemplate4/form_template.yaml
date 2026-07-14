@@ -1,0 +1,31 @@
+components:
+- layout_properties: {column: JKSDUP}
+  name: lbl_trip_date
+  properties: {align: right}
+  type: Label
+- layout_properties: {column: VJQQOR}
+  name: lbl_trip_number
+  properties: {align: right}
+  type: Label
+- layout_properties: {column: OJLQEN}
+  name: lbl_sku_count
+  properties: {align: right}
+  type: Label
+- layout_properties: {column: VNWNPI}
+  name: lbl_volume
+  properties: {align: right}
+  type: Label
+- layout_properties: {column: IXADKH}
+  name: lbl_weight
+  properties: {align: right}
+  type: Label
+- layout_properties: {column: WAEKXY}
+  name: lbl_vol_pct
+  properties: {align: right}
+  type: Label
+- layout_properties: {column: XWNQBQ}
+  name: lbl_wt_pct
+  properties: {align: right}
+  type: Label
+container: {type: DataRowPanel}
+is_package: true

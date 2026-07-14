@@ -1,0 +1,290 @@
+components:
+- components:
+  - components:
+    - event_bindings: {}
+      layout_properties: {}
+      name: btn_scan
+      properties:
+        align: left
+        icon: fa:search
+        role: elevated-button
+        spacing:
+          padding: [null, '15', null, '15']
+        text: Scan Work Orders
+      type: Button
+    - event_bindings: {}
+      layout_properties: {}
+      name: btn_refresh
+      properties:
+        align: right
+        icon: fa:refresh
+        role: elevated-button
+        spacing:
+          padding: [null, '15', null, '15']
+        text: Refresh Work Orders
+      type: Button
+    - layout_properties: {}
+      name: btn_ack_orphans
+      properties:
+        align: right
+        foreground: '#FF9800'
+        icon: fa:check-square-o
+        role: elevated-button
+        spacing:
+          padding: [null, '15', null, '15']
+        text: Accept Orphans
+      type: Button
+    - layout_properties: {}
+      name: lbl_last_refreshed
+      properties: {align: left, font_size: 10, foreground: '#888888', icon: 'fa:refresh', italic: true, text: 'Last Refreshed: -- '}
+      type: Label
+    layout_properties: {full_width_row: true, grid_position: 'OISICE,JEPZLC'}
+    name: flow_buttons
+    properties:
+      spacing:
+        margin: ['0', null, '0', null]
+    type: FlowPanel
+  - components:
+    - data_bindings: []
+      event_bindings: {}
+      layout_properties: {width: 183.5}
+      name: dd_status_filter
+      properties:
+        include_placeholder: true
+        items: [All, Created, Released, In Progress, Shipped - Verify, Invoiced - Verify, Closed - Verify, Complete, Pending Changes]
+        placeholder: Filter by Status
+      type: DropDown
+    - event_bindings: {}
+      layout_properties: {width: 217}
+      name: dd_sort
+      properties:
+        include_placeholder: true
+        items: [Created Date (Newest), Due Date (Earliest), SO# (Ascending), 'WO# (Ascending) ', Part# (Ascending)]
+        margin: [null, null, '4', null]
+        placeholder: 'Sort Ascending by:'
+      type: DropDown
+    - data_bindings: []
+      event_bindings: {}
+      layout_properties: {width: 245}
+      name: tb_search
+      properties:
+        margin: [null, null, '4', null]
+        placeholder: Search by SO#, Part#, or WO#
+      type: TextBox
+    - layout_properties: {}
+      name: btn_clear_filters
+      properties:
+        align: right
+        icon: fa:times
+        role: elevated-button
+        spacing:
+          padding: [null, '15', null, '15']
+        text: Clear Filters
+      type: Button
+    - event_bindings: {}
+      layout_properties: {}
+      name: cb_active_only
+      properties: {text: Active Word Orders Only}
+      type: CheckBox
+    - event_bindings: {}
+      layout_properties: {}
+      name: cb_backorder_only
+      properties: {text: Backorders Only}
+      type: CheckBox
+    layout_properties: {full_width_row: true, grid_position: 'CENMEQ,IELMLJ'}
+    name: flow_filters
+    properties: {}
+    type: FlowPanel
+  - components:
+    - layout_properties: {}
+      name: lbl_created_count
+      properties:
+        bold: true
+        border: '1px solid #2196F3'
+        foreground: '#2196F3'
+        spacing:
+          padding: [null, '8', null, '8']
+        text: 'Created: 0'
+      type: Label
+    - layout_properties: {}
+      name: lbl_in_progress_count
+      properties:
+        bold: true
+        border: '1px solid #FF9800'
+        foreground: '#FF9800'
+        spacing:
+          padding: [null, '8', null, '8']
+        text: 'In Progress: 0'
+      type: Label
+    - layout_properties: {}
+      name: lbl_complete_count
+      properties:
+        bold: true
+        border: '1px solid #4CAF50'
+        foreground: '#4CAF50'
+        spacing:
+          padding: [null, '8', null, '8']
+        text: 'Complete: 0'
+      type: Label
+    - layout_properties: {}
+      name: lbl_changes_count
+      properties:
+        bold: true
+        border: '1px solid #FF9800'
+        foreground: '#FF9800'
+        spacing:
+          padding: [null, '8', null, '8']
+        text: 'Changes: 0'
+      type: Label
+    - layout_properties: {}
+      name: lbl_record_count
+      properties: {align: right, font_size: 12, foreground: '#888888', icon: 'fa:arrow-right', text: 0 work orders}
+      type: Label
+    layout_properties: {full_width_row: true, grid_position: 'ITLILM,NODMUV'}
+    name: flow_summary
+    properties:
+      spacing:
+        margin: ['0', null, null, null]
+        padding: ['0', null, null, null]
+    type: FlowPanel
+  - components:
+    - name: repeating_panel_1
+      properties: {item_template: work_orders.WorkOrdersRowTemplate}
+      type: RepeatingPanel
+    data_bindings: []
+    layout_properties: {full_width_row: true, grid_position: 'TRVFKH,LFNVUC'}
+    name: grid_work_orders
+    properties:
+      columns:
+      - {data_key: '', expand: false, id: JKSDUP, title: WO#, width: '130'}
+      - {data_key: '', expand: false, id: VJQQOR, title: Status, width: '200'}
+      - {data_key: '', id: OJLQEN, title: SO#, width: '120'}
+      - {data_key: sales_order_line, id: JIXSRC, title: Line, width: '75'}
+      - {data_key: part_number, id: NTNWAU, title: Part#, width: '120'}
+      - {data_key: material_value, id: SVQOSD, title: Material, width: '120'}
+      - {data_key: se_value, id: NEORKT, title: SE, width: '150'}
+      - {data_key: quantity, id: CFDXLR, title: Qty, width: '75'}
+      - {data_key: '', id: EXQTUZ, title: Override Qty, width: '120'}
+      - {data_key: '', id: PBWTKO, title: WO Due Date, width: '150'}
+      - {data_key: '', id: SVOJTH, title: SO Due Date, width: '125'}
+      - {data_key: created_at, id: ZWLYFT, title: Created, width: '175'}
+      - {data_key: '', expand: true, id: BDHJXT, title: Notes, width: '350'}
+      - {data_key: '', expand: true, id: BXEPWR, title: Actions, width: '325'}
+      margin: [null, '0', null, '0']
+      role: [horizontal-scroll, tonal-data-grid]
+      rows_per_page: 10
+    type: DataGrid
+  - components:
+    - layout_properties: {grid_position: 'MUAXYE,SSYNUW'}
+      name: lbl_detail_header
+      properties:
+        align: left
+        bold: true
+        font_size: 16
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: [null, '5', null, '10']
+        text: Work Order Details
+      type: Label
+    - layout_properties: {grid_position: 'MUAXYE,BKCWPG'}
+      name: lbl_config_match
+      properties:
+        bold: true
+        foreground: Red if special, green if standard
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: [null, '10', null, '5']
+      type: Label
+    - event_bindings: {}
+      layout_properties: {grid_position: 'MUAXYE,NLQFHE'}
+      name: link_hide
+      properties: {align: center, bold: false, font_size: 18, foreground: '#888888', icon: 'fa:times'}
+      type: Link
+    - layout_properties: {grid_position: 'GRSPWZ,NZUNHV ZTEYYB,ZGACGE'}
+      name: lbl_detail_notes
+      properties:
+        spacing:
+          margin: [null, null, '0', null]
+          padding: [null, '7', '0', '7']
+      type: RichText
+    - layout_properties: {grid_position: 'GRSPWZ,NZUNHV BWBRWR,YYFAKH'}
+      name: lbl_so_notes
+      properties:
+        spacing:
+          margin: ['0', null, null, null]
+          padding: ['0', '7', null, '7']
+      type: RichText
+    - layout_properties: {grid_position: 'GRSPWZ,BVUAWB OPBFAL,ATGABX'}
+      name: lbl_standard_config
+      properties:
+        spacing:
+          margin: [null, null, '0', null]
+          padding: [null, '7', '0', '7']
+      type: RichText
+    - layout_properties: {grid_position: 'GRSPWZ,BVUAWB SAYKOA,KPMDFE'}
+      name: lbl_ordered_config
+      properties:
+        spacing:
+          margin: ['0', null, null, null]
+          padding: ['0', '7', null, '7']
+      type: RichText
+    - layout_properties: {grid_position: 'GRSPWZ,BVUAWB YYJWKL,VXRWAM'}
+      name: lbl_changes_header
+      properties:
+        bold: true
+        font_size: 14
+        icon: ''
+        spacing:
+          padding: [null, null, null, '7']
+        text: Change History
+        underline: true
+        visible: false
+      type: Label
+    - layout_properties: {grid_position: 'GRSPWZ,BVUAWB ONLTYR,MAKDAF'}
+      name: rt_change_history
+      properties:
+        spacing:
+          padding: [null, '7', null, '7']
+        visible: false
+      type: RichText
+    - layout_properties: {grid_position: 'GRSPWZ,BVUAWB JGRCEN,BQEJXW'}
+      name: btn_acknowledge
+      properties:
+        icon: fa:check
+        role: elevated-button
+        spacing:
+          margin: ['10', null, '10', null]
+        text: Acknowledge Changes
+        visible: false
+      type: Button
+    layout_properties: {grid_position: 'JCSDPE,XMAAVH'}
+    name: panel_detail
+    properties: {background: '#F5F5F5', border: '1px solid #CCCCCC', col_widths: '{"SSYNUW":45,"BKCWPG":40,"NZUNHV":30,"BVUAWB":30,"NLQFHE":5}', visible: false}
+    type: ColumnPanel
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {col_widths: '{}'}
+  type: ColumnPanel
+- layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: title}
+  name: lbl_title
+  properties:
+    bold: false
+    font_size: null
+    role: title
+    spacing:
+      margin: ['5', null, null, null]
+      padding: ['8', null, null, null]
+    text: Work Orders - Straining Element Department
+  type: Label
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

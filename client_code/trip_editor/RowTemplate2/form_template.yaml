@@ -1,0 +1,47 @@
+components:
+- data_bindings: []
+  layout_properties: {column: JKSDUP}
+  name: lbl_sku
+  properties: {}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: VJQQOR}
+  name: lbl_location
+  properties: {align: right}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: OJLQEN}
+  name: lbl_hub_oh
+  properties: {align: right}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: VEMYWS}
+  name: txt_qty
+  properties: {align: right}
+  type: TextBox
+- data_bindings: []
+  layout_properties: {column: SUZTHF}
+  name: lbl_priority
+  properties: {align: right}
+  type: Label
+- event_bindings: {}
+  layout_properties: {column: QLDJBC}
+  name: dp_date
+  properties: {align: right, pick_time: false}
+  type: DatePicker
+- event_bindings: {}
+  layout_properties: {column: ABVFVE}
+  name: dd_time
+  properties: {align: right}
+  type: DropDown
+- data_bindings: []
+  layout_properties: {column: KYITXR}
+  name: dd_trip
+  properties: {align: right}
+  type: DropDown
+- layout_properties: {column: ANWTDA}
+  name: cb_selected
+  properties: {align: center, checked: false, text: ''}
+  type: CheckBox
+container: {type: DataRowPanel}
+is_package: true

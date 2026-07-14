@@ -1,0 +1,135 @@
+components:
+- components:
+  - components:
+    - layout_properties: {}
+      name: btn_release_wo
+      properties:
+        align: right
+        icon: fa:play
+        role: elevated-button
+        spacing:
+          padding: [null, '12', null, '12']
+        text: Release WO
+        visible: false
+      type: Button
+    - layout_properties: {}
+      name: btn_cancel_wo
+      properties:
+        align: right
+        icon: fa:times-circle
+        role: elevated-button
+        spacing:
+          padding: [null, '12', null, '12']
+        text: Cancel WO
+        visible: false
+      type: Button
+    - layout_properties: {}
+      name: btn_print_wo
+      properties:
+        align: right
+        icon: fa:print
+        role: elevated-button
+        spacing:
+          padding: [null, '12', null, '12']
+        text: Print WO
+      type: Button
+    - layout_properties: {}
+      name: btn_release_so_packet
+      properties:
+        icon: fa:play
+        role: elevated-button
+        spacing:
+          padding: [null, '12', null, '12']
+        text: Release SO Packet
+        visible: true
+      type: Button
+    - layout_properties: {}
+      name: btn_cancel_so_packet
+      properties:
+        icon: fa:times-circle-o
+        role: elevated-button
+        spacing:
+          padding: [null, '12', null, '12']
+        text: Cancel SO Packet
+        visible: true
+      type: Button
+    - layout_properties: {}
+      name: btn_print_so_packet
+      properties:
+        icon: fa:files-o
+        role: elevated-button
+        spacing:
+          padding: [null, '12', null, '12']
+        text: Print SO Packet
+      type: Button
+    data_bindings: []
+    layout_properties: {grid_position: 'TLUOEU,ZTLYKU'}
+    name: flow_actions
+    properties:
+      align: center
+      border: '1px solid #CCCCCC'
+      role: null
+      spacing:
+        margin: [null, '7', null, '7']
+        padding: ['7', '7', '7', '7']
+    type: FlowPanel
+  - layout_properties: {grid_position: 'MUAXYE,SSYNUW RABCZB,POLGZR'}
+    name: lbl_detail_header
+    properties:
+      align: left
+      bold: true
+      font_size: 16
+      spacing:
+        margin: ['0', null, '0', null]
+        padding: [null, '5', null, '10']
+      text: Work Order Details
+    type: Label
+  - layout_properties: {grid_position: 'MUAXYE,SSYNUW SZQUIC,RQBVAC'}
+    name: lbl_detail_notes
+    properties:
+      font_size: 14
+      spacing:
+        margin: [null, null, '0', null]
+        padding: [null, '7', '0', '7']
+    type: RichText
+  - layout_properties: {grid_position: 'MUAXYE,SSYNUW OBSRMA,OEEQHZ'}
+    name: lbl_so_notes
+    properties:
+      font_size: 14
+      spacing:
+        margin: ['0', null, null, null]
+        padding: ['0', '7', null, '7']
+    type: RichText
+  - layout_properties: {grid_position: 'MUAXYE,BKCWPG UXROTZ,YVLPWN'}
+    name: lbl_config_match
+    properties:
+      bold: true
+      foreground: Red if special, green if standard
+      spacing:
+        margin: ['0', null, '0', null]
+        padding: [null, '10', null, '5']
+    type: Label
+  - layout_properties: {grid_position: 'MUAXYE,BKCWPG YFDBKS,KEHEUF'}
+    name: lbl_standard_config
+    properties:
+      font_size: 14
+      spacing:
+        margin: [null, null, '0', null]
+        padding: [null, '7', '0', '7']
+    type: RichText
+  - layout_properties: {grid_position: 'MUAXYE,BKCWPG DNVJDZ,SSSPAQ'}
+    name: lbl_ordered_config
+    properties:
+      font_size: 14
+      spacing:
+        margin: ['0', null, null, null]
+        padding: ['0', '7', null, '7']
+    type: RichText
+  layout_properties: {grid_position: 'PNBANH,NLQXDW'}
+  name: panel_detail
+  properties: {background: '#F5F5F5', border: '1px solid #CCCCCC', col_widths: '{"SSYNUW":45,"BKCWPG":40}', visible: true}
+  type: ColumnPanel
+container:
+  properties: {border: 1 px}
+  type: ColumnPanel
+is_package: true

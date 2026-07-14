@@ -1,0 +1,67 @@
+components:
+- data_bindings:
+  - {code: 'self.item[''batch_id'']', property: text, writeback: false}
+  layout_properties: {column: JKSDUP}
+  name: lbl_batch_id
+  properties: {}
+  type: Label
+- data_bindings:
+  - {code: 'self.item[''target_year'']', property: text, writeback: false}
+  layout_properties: {column: VJQQOR}
+  name: lbl_target_year
+  properties: {}
+  type: Label
+- data_bindings:
+  - {code: 'self.item[''status'']', property: text, writeback: false}
+  layout_properties: {column: OJLQEN}
+  name: lbl_status
+  properties: {}
+  type: Label
+- data_bindings:
+  - {code: 'self.item[''sku_count'']', property: text, writeback: false}
+  layout_properties: {column: YQAXUC}
+  name: lbl_sku_count
+  properties: {}
+  type: Label
+- data_bindings:
+  - {code: 'self.item[''series_count'']', property: text, writeback: false}
+  layout_properties: {column: TFTKYY}
+  name: lbl_series_count
+  properties: {}
+  type: Label
+- data_bindings:
+  - {code: 'self.item[''training_start'']', property: text, writeback: false}
+  layout_properties: {column: HYBIEZ}
+  name: lbl_training_start
+  properties: {}
+  type: Label
+- data_bindings:
+  - {code: 'self.item[''training_end'']', property: text, writeback: false}
+  layout_properties: {column: NORWIG}
+  name: lbl_training_end
+  properties: {}
+  type: Label
+- data_bindings:
+  - {code: 'self.item[''created_date'']', property: text, writeback: false}
+  layout_properties: {column: LMSIYJ}
+  name: lbl_created_date
+  properties: {}
+  type: Label
+- data_bindings:
+  - {code: 'self.item[''created_by'']', property: text, writeback: false}
+  layout_properties: {column: MDLWUG}
+  name: lbl_created_by
+  properties: {}
+  type: Label
+- data_bindings:
+  - {code: 'self.item[''notes'']', property: text, writeback: false}
+  layout_properties: {column: XABWWR}
+  name: lbl_notes
+  properties: {}
+  type: Label
+- layout_properties: {column: GPUSQJ}
+  name: btn_export
+  properties: {icon: 'fa:file-excel-o', role: elevated-button, text: Export}
+  type: Button
+container: {type: DataRowPanel}
+is_package: true
