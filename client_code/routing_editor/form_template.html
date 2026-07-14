@@ -1,26 +1,21 @@
 <anvil-form container="ColumnPanel">
   <anvil-component type="ColumnPanel" name="cp_editor_root">
-
     <!-- Header -->
     <anvil-component type="Label" name="lbl_editor_title" prop:bold="true" prop:role="headline"></anvil-component>
     <anvil-component type="Label" name="lbl_wo_summary"></anvil-component>
     <anvil-component type="Label" name="lbl_template_banner"></anvil-component>
-
     <!-- Notes (read-only reference) -->
     <anvil-component type="Label" name="lbl_sku_notes_cap" prop:text="SKU Notes" prop:bold="true"></anvil-component>
     <anvil-component type="TextArea" name="ta_sku_notes" prop:enabled="false" prop:auto_expand="true"></anvil-component>
     <anvil-component type="Label" name="lbl_so_notes_cap" prop:text="Sales Order Notes" prop:bold="true"></anvil-component>
     <anvil-component type="TextArea" name="ta_so_notes" prop:enabled="false" prop:auto_expand="true"></anvil-component>
-
     <!-- Step list -->
     <anvil-component type="RepeatingPanel" name="rp_steps" prop:item_template="Transfer_Dashboard.RoutingStepRow"></anvil-component>
     <anvil-component type="Button" name="btn_add_step" prop:text="+ Add Step" prop:role="outlined-button"></anvil-component>
-
     <!-- Action row -->
     <anvil-component type="FlowPanel" name="fp_actions" prop:align="right">
       <anvil-component type="Button" name="btn_save_routing" prop:text="Save Routing &amp; Release" prop:role="filled-button"></anvil-component>
       <anvil-component type="Button" name="btn_cancel" prop:text="Cancel" prop:role="outlined-button"></anvil-component>
     </anvil-component>
-
   </anvil-component>
 </anvil-form>

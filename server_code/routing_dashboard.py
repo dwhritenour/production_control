@@ -218,6 +218,38 @@ def get_routing_for_release(work_order_id):
 
 
 # =============================================================================
+# GET SO CREATED WORK ORDERS (packet-release routing loop)
+# =============================================================================
+
+@anvil.server.callable
+def get_so_created_work_orders(sales_order_number, sales_order_rel):
+  """
+    'Created' work orders on a sales order, for the packet-release routing
+    loop in WorkOrderDetail (each WO gets a routing before its release;
+    same-part WOs can reuse the first routing).
+
+    Returns:
+        {status, work_orders: [{work_order_id, work_order_number,
+                                part_number}]}
+  """
+  conn = get_connection()
+  try:
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT work_order_id, work_order_number, part_number
+        FROM dbo.work_orders
+        WHERE sales_order_number = %s
+          AND sales_order_rel = %s
+          AND status = 'Created'
+        ORDER BY work_order_number
+    """, (sales_order_number, sales_order_rel))
+    return {'status': 'success',
+            'work_orders': [serialize_row(r) for r in cursor.fetchall()]}
+  finally:
+    conn.close()
+
+
+# =============================================================================
 # SAVE WO ROUTING (Release-time snapshot)
 # =============================================================================
 
@@ -625,7 +657,6 @@ def reset_steps_for_rework(work_order_id, from_sequence, actor=None):
     cursor.execute("""
         SELECT wo_step_id, sequence_number, status
         FROM dbo.pc_wo_routing_steps
-        WHERE work_order_id = %s AND sequence_number >= %s
           AND status <> %s
         ORDER BY sequence_number, wo_step_id
     """, (work_order_id, from_sequence, STATUS_SKIPPED))
@@ -655,4 +686,3 @@ def reset_steps_for_rework(work_order_id, from_sequence, actor=None):
     return {'status': 'error', 'message': f'Error resetting steps: {e}'}
   finally:
     conn.close()
-

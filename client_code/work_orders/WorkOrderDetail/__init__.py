@@ -3,9 +3,15 @@ from anvil import *
 import anvil.server
 import anvil.media
 
+from ...routing_editor import routing_editor
+from ...routing_status import routing_status
+
 
 # Statuses from which the office may still cancel a work order.
 CANCELLABLE_STATUSES = ('Created', 'Released', 'Assigned', 'In Progress', 'Paused')
+
+# Statuses at (or beyond) Release — the routing panel is shown for these.
+ROUTED_STATUSES = ('Released', 'Assigned', 'In Progress', 'Paused', 'Complete')
 
 
 class WorkOrderDetail(WorkOrderDetailTemplate):
@@ -19,11 +25,17 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
        btn_release_so_packet   -> Release ALL WOs for the SO
        btn_cancel_so_packet-> Cancel ALL WOs for the SO
     Print buttons (btn_print_wo / btn_print_so_packet) are unchanged.
+
+    Routing v1 (2026-07-14): a WO cannot reach 'Released' without a saved
+    routing. Release actions open the routing_editor dialog first; the status
+    flip only happens after the routing snapshot is saved. Released-and-later
+    WOs show the routing_status panel at the bottom of this popup.
   """
 
   def __init__(self, item, **properties):
     self.init_components(**properties)
     self._item = item
+    self._routing_panel = None
     self._populate()
 
   def _populate(self):
@@ -96,10 +108,36 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
       self.btn_release_so_packet.text = 'Release SO Packet'
     self.btn_cancel_so_packet.text = 'Cancel SO Packet'
 
+    # ---------------------------------------------------------------
+    # Routing panel (Routing v1): Released-and-later WOs only.
+    # Rework reset is offered while the WO sits at 'Released'
+    # (the Reopen flow returns WOs there for re-triage).
+    # ---------------------------------------------------------------
+    if status in ROUTED_STATUSES and self._routing_panel is None:
+      self._routing_panel = routing_status(
+        self._item['work_order_id'],
+        show_rework=(status == 'Released'))
+      self.add_component(self._routing_panel)
+
+  # =========================================================================
+  # ROUTING EDITOR (Routing v1)
+  # =========================================================================
+  def _run_routing_editor(self, work_order_id):
+    """
+      Open the routing editor for one WO. Returns the editor's close value:
+      {'saved': True, 'steps': [...], 'part_number': ...} or None (cancelled).
+      A None return means the caller must NOT release the WO.
+    """
+    payload = anvil.server.call('get_routing_for_release', work_order_id)
+    if payload.get('status') != 'success':
+      alert(f"Error: {payload.get('message', 'Unknown error')}")
+      return None
+    return alert(content=routing_editor(payload), large=True, buttons=[])
+
   # =========================================================================
   # SINGLE WO: RELEASE / UNRELEASE  (btn_release_wo, dual-purpose)
-  #   Created  -> Released   (Release)
-  #   Released -> Created    (UnRelease)
+  #   Created  -> Released   (Release; routing editor gates the flip)
+  #   Released -> Created    (UnRelease; routing snapshot is kept)
   # =========================================================================
   @handle("btn_release_wo", "click")
   def btn_release_wo_click(self, **event_args):
@@ -110,13 +148,18 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
       if not confirm(
         f"Un-release WO {wo_num} back to 'Created'?\n\n"
         "It will be removed from the SE Department board until it is "
-        "released again."
+        "released again. Its routing is kept and will pre-load at the "
+        "next release."
       ):
         return
       result = anvil.server.call('unrelease_work_order',
                                  self._item['work_order_id'])
       ok_msg = f"WO {wo_num} un-released (back to Created)"
     else:
+      # Routing v1 gate: no routing saved -> no release.
+      saved = self._run_routing_editor(self._item['work_order_id'])
+      if not (saved and saved.get('saved')):
+        return
       result = anvil.server.call('update_work_order_status',
                                  self._item['work_order_id'], 'Released')
       ok_msg = f"WO {wo_num} released to the SE Department"
@@ -155,8 +198,8 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
 
   # =========================================================================
   # SO PACKET: RELEASE / UN-RELEASE ALL  (btn_release_so_packet, dual-purpose)
-  #   opened WO Released -> UnRelease packet (Released -> Created)
-  #   otherwise          -> Release packet   (Created  -> Released)
+  #   opened WO Released -> UnRelease packet (Released -> Created, unchanged)
+  #   otherwise          -> Release packet: per-WO routing loop (Routing v1)
   # =========================================================================
   @handle("btn_release_so_packet", "click")
   def btn_release_so_packet_click(self, **event_args):
@@ -169,42 +212,85 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
         f"Un-release all work orders for SO {so_num}-{rel}?\n\n"
         f"This pulls every 'Released' work order back to 'Created' and off "
         f"the SE Department board. Work orders already on the floor "
-        f"(Assigned / In Progress / Paused) are left in place."
+        f"(Assigned / In Progress / Paused) are left in place. Routings "
+        f"are kept."
       ):
         return
-      server_fn, busy_text, idle_text = (
-        'unrelease_so_work_orders', "Un-releasing...", "UnRelease SO Packet")
-    else:
-      if not confirm(
-        f"Release all work orders for SO {so_num}-{rel}?\n\n"
-        f"This moves every 'Created' work order to 'Released' so they appear "
-        f"on the SE Department board."
-      ):
-        return
-      server_fn, busy_text, idle_text = (
-        'release_so_work_orders', "Releasing...", "Release SO Packet")
-
-    self.btn_release_so_packet.enabled = False
-    self.btn_release_so_packet.text = busy_text
-    try:
-      result = anvil.server.call(server_fn, so_num, rel)
-      if result['status'] == 'success':
-        msg = result.get('message', '')
-        if unrelease_mode:
+      self.btn_release_so_packet.enabled = False
+      self.btn_release_so_packet.text = "Un-releasing..."
+      try:
+        result = anvil.server.call('unrelease_so_work_orders', so_num, rel)
+        if result['status'] == 'success':
+          msg = result.get('message', '')
           skipped = result.get('skipped_on_floor', 0)
           if skipped > 0:
             msg += f" ({skipped} left on the floor)"
+          Notification(msg).show()
+          self.raise_event('x-close')
         else:
-          already = result.get('already_released', 0)
-          if already > 0:
-            msg += f" ({already} already released or further along)"
-        Notification(msg).show()
-        self.raise_event('x-close')
+          alert(f"Error: {result.get('message', 'Unknown error')}")
+      finally:
+        self.btn_release_so_packet.enabled = True
+        self.btn_release_so_packet.text = "UnRelease SO Packet"
+      return
+
+    # ---- Release mode: per-WO routing loop (Routing v1) ----
+    listing = anvil.server.call('get_so_created_work_orders', so_num, rel)
+    if listing.get('status') != 'success':
+      alert(f"Error: {listing.get('message', 'Unknown error')}")
+      return
+    wos = listing.get('work_orders', [])
+    if not wos:
+      Notification(f"No 'Created' work orders on SO {so_num}-{rel}.").show()
+      return
+
+    if not confirm(
+      f"Release all {len(wos)} 'Created' work order(s) for SO {so_num}-{rel}?\n\n"
+      f"Each work order needs a routing — you'll be walked through them. "
+      f"Work orders sharing a part can reuse the first routing."
+    ):
+      return
+
+    released = 0
+    part_routings = {}  # part_number -> steps to reuse across the packet
+
+    for idx, wo in enumerate(wos):
+      part = wo.get('part_number', '')
+      wo_id = wo['work_order_id']
+      wo_num = wo.get('work_order_number', '')
+
+      if part in part_routings:
+        saved = anvil.server.call('save_wo_routing', wo_id,
+                                  part_routings[part])
+        if saved.get('status') != 'success':
+          alert(f"WO {wo_num}: {saved.get('message', 'Unknown error')} — skipped.")
+          continue
       else:
-        alert(f"Error: {result.get('message', 'Unknown error')}")
-    finally:
-      self.btn_release_so_packet.enabled = True
-      self.btn_release_so_packet.text = idle_text
+        value = self._run_routing_editor(wo_id)
+        if not (value and value.get('saved')):
+          if confirm(f"WO {wo_num} was not routed. Skip it and continue "
+                     f"with the rest of the packet?"):
+            continue
+          break
+        remaining_same_part = sum(
+          1 for w in wos[idx + 1:]
+          if w.get('part_number', '') == part)
+        if remaining_same_part > 0 and confirm(
+          f"Apply this same routing to the remaining {remaining_same_part} "
+          f"work order(s) for part {part} in this packet?"
+        ):
+          part_routings[part] = value['steps']
+
+      result = anvil.server.call('update_work_order_status', wo_id, 'Released')
+      if result.get('status') == 'success':
+        released += 1
+      else:
+        alert(f"WO {wo_num}: {result.get('message', 'Unknown error')}")
+
+    Notification(f"{released} of {len(wos)} work order(s) released "
+                 f"for SO {so_num}-{rel}").show()
+    if released:
+      self.raise_event('x-close')
 
   # =========================================================================
   # SO PACKET: CANCEL ALL  (btn_cancel_so_packet)
