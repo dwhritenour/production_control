@@ -1,0 +1,12 @@
+<anvil-form container="ColumnPanel">
+  <anvil-component type="ColumnPanel" name="cp_status_root">
+
+    <anvil-component type="Label" name="lbl_routing_cap" prop:text="Routing" prop:bold="true"></anvil-component>
+    <anvil-component type="Label" name="lbl_oos_banner" prop:visible="false"></anvil-component>
+
+    <anvil-component type="RepeatingPanel" name="rp_status_steps" prop:item_template="Transfer_Dashboard.RoutingStatusRow"></anvil-component>
+
+    <anvil-component type="Button" name="btn_rework" prop:text="Reset Steps for Rework…" prop:role="outlined-button" prop:visible="false"></anvil-component>
+
+  </anvil-component>
+</anvil-form>
