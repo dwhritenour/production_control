@@ -2,7 +2,7 @@ allow_embedding: false
 correct_dependency_ids: {}
 dependencies: []
 metadata: {description: 'Allows approval, rejecting and editing transfers.', title: Transfer Recommendations}
-name: Clone of Transfer Dashboard
+name: Production Control
 package_name: Transfer_Dashboard
 renamed: true
 runtime_options:
