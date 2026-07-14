@@ -6,36 +6,20 @@ import anvil.server
 class NavSidebar(NavSidebarTemplate):
   # Maps a page identifier to the nav button that should be highlighted.
   _ACTIVE_BUTTONS = {
-    'transfer_recs':          'btn_transfer_form',
-    'trip_editor':            'btn_trip_form',
-    'driver_deliver':         'btn_deliver',
-    'forecast_dashboard':     'btn_forecast_batch',
-    'forecast_sku_detail':    'btn_forecasts',
-    'forecast_batch_results': 'btn_results',
-    'forecast_accuracy':      'btn_accuracy',
     'abc_classification':     'btn_abcclass',
     'minmax_review':          'btn_minmax',
     'work_orders':            'btn_work_orders',
     'work_orders_condensed':   'btn_work_orders_condensed',
     'sales_orders_due':       'btn_sales_orders',
-    'system_admin':           'btn_sys_admin_form',
   }
 
   # One handler per button -> one open_form target. Defined ONLY here.
   _NAV_TARGETS = {
-    'btn_transfer_form':  'transfer_recs',
-    'btn_trip_form':      'trip_editor',
-    'btn_deliver':        'driver_deliver',
-    'btn_forecast_batch': 'forecast_dashboard',
-    'btn_forecasts':      'forecast_sku_detail',
-    'btn_results':        'forecast_batch_results',
-    'btn_accuracy':       'forecast_accuracy',
     'btn_abcclass':       'abc_classification',
     'btn_minmax':         'minmax_review',
     'btn_work_orders':    'work_orders',
     'btn_work_orders_condensed':    'work_orders_condensed',
     'btn_sales_orders':   'sales_orders_due',
-    'btn_sys_admin_form': 'system_admin',
   }
 
   def __init__(self, active=None, **properties):

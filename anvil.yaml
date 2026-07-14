@@ -65,6 +65,6 @@ services:
 - client_config: {}
   server_config: {}
   source: /runtime/services/anvil/secrets.yml
-startup: {module: transfer_recs, type: form}
+startup: {module: work_orders, type: form}
 startup_form: null
 uplink_visible: true

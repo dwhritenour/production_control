@@ -1,85 +1,4 @@
 components:
-- layout_properties: {grid_position: 'XRZMRQ,KNXBRR'}
-  name: lbl_hub
-  properties: {bold: true, text: The Hub Facility, underline: true}
-  type: Label
-- event_bindings: {}
-  layout_properties: {grid_position: 'XFVRBP,HUORQS'}
-  name: btn_transfer_form
-  properties: {enabled: true, icon: 'fa:exchange', role: elevated-button, text: Transfer Form}
-  type: Button
-- event_bindings: {}
-  layout_properties: {grid_position: 'JUXYRB,OHNJKR'}
-  name: btn_trip_form
-  properties:
-    icon: fa:truck
-    role: elevated-button
-    spacing:
-      padding: [null, '35', null, '35']
-    text: Trip Editor
-  type: Button
-- event_bindings: {}
-  layout_properties: {grid_position: 'JGWPIN,ERPGDJ'}
-  name: btn_deliver
-  properties:
-    icon: fa:amazon
-    role: elevated-button
-    spacing:
-      padding: [null, '35', null, '35']
-    text: Deliver Trip
-  type: Button
-- layout_properties: {grid_position: 'RZELXV,MZFHVM'}
-  name: lbl_hub_2
-  properties: {bold: true, text: Forecasts, underline: true}
-  type: Label
-- event_bindings: {}
-  layout_properties: {grid_position: 'TZQOAR,JPEYGE'}
-  name: btn_forecast_batch
-  properties:
-    enabled: true
-    icon: fa:line-chart
-    role: elevated-button
-    spacing:
-      padding: [null, '42', null, '42']
-    text: Batches
-    visible: true
-  type: Button
-- event_bindings: {}
-  layout_properties: {grid_position: 'SVNVQX,ENJWWM'}
-  name: btn_forecasts
-  properties:
-    enabled: true
-    icon: fa:line-chart
-    role: elevated-button
-    spacing:
-      padding: [null, '45', null, '45']
-    text: By SKU
-    visible: true
-  type: Button
-- event_bindings: {}
-  layout_properties: {grid_position: 'BITQIA,ELTSWG'}
-  name: btn_results
-  properties:
-    enabled: true
-    icon: fa:line-chart
-    role: elevated-button
-    spacing:
-      padding: [null, '45', null, '45']
-    text: Series
-    visible: true
-  type: Button
-- event_bindings: {}
-  layout_properties: {grid_position: 'ZVQBTB,BBCDHY'}
-  name: btn_accuracy
-  properties:
-    enabled: true
-    icon: fa:check-square-o
-    role: elevated-button
-    spacing:
-      padding: [null, '35', null, '35']
-    text: Accuracy
-    visible: true
-  type: Button
 - layout_properties: {grid_position: 'NXREXV,AVITOC'}
   name: lbl_starlite
   properties: {bold: true, text: Starlite Facility, underline: true}
@@ -135,15 +54,6 @@ components:
     spacing:
       padding: [null, '30', null, '30']
     text: Sales Orders
-  type: Button
-- layout_properties: {grid_position: 'UPZBAI,FXIPAM'}
-  name: lbl_admin
-  properties: {bold: true, text: Administration, underline: true}
-  type: Label
-- event_bindings: {}
-  layout_properties: {grid_position: 'URCAUE,GSAHJE'}
-  name: btn_sys_admin_form
-  properties: {icon: 'fa:cog', role: elevated-button, text: Settings Form}
   type: Button
 container: {type: ColumnPanel}
 custom_component: true
