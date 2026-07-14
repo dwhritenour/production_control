@@ -4,27 +4,6 @@ components:
   properties: {bold: true, text: Starlite Facility, underline: true}
   type: Label
 - event_bindings: {}
-  layout_properties: {grid_position: 'CJHNTV,RWNPCL'}
-  name: btn_abcclass
-  properties:
-    enabled: true
-    icon: fa:tags
-    role: elevated-button
-    spacing:
-      padding: [null, '36', null, '36']
-    text: ABC Class
-  type: Button
-- event_bindings: {}
-  layout_properties: {grid_position: 'AJOQUK,BCHVGO'}
-  name: btn_minmax
-  properties:
-    icon: fa:sliders
-    role: elevated-button
-    spacing:
-      padding: [null, '30', null, '30']
-    text: Min/Max Qty
-  type: Button
-- event_bindings: {}
   layout_properties: {grid_position: 'ECWAQI,WHSFBF'}
   name: btn_work_orders
   properties:
