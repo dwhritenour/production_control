@@ -9,6 +9,7 @@ class NavSidebar(NavSidebarTemplate):
     'work_orders':            'btn_work_orders',
     'work_orders_condensed':   'btn_work_orders_condensed',
     'sales_orders_due':       'btn_sales_orders',
+    'processed_transfers':    'btn_processed',
   }
 
   # One handler per button -> one open_form target. Defined ONLY here.
@@ -16,6 +17,7 @@ class NavSidebar(NavSidebarTemplate):
     'btn_work_orders':    'work_orders',
     'btn_work_orders_condensed':    'work_orders_condensed',
     'btn_sales_orders':   'sales_orders_due',
+    'processed_transfers':    'btn_processed'
   }
 
   def __init__(self, active=None, **properties):
