@@ -19,7 +19,7 @@ class routing_status(routing_statusTemplate):
     self._steps = []
 
     self.btn_rework.set_event_handler('click', self._rework_click)
-    self.rp_status_steps.set_event_handler('x-record', self._record)
+    # Rows call self._record via item['on_record'] (callback pattern)
 
     self.refresh()
 
@@ -35,6 +35,7 @@ class routing_status(routing_statusTemplate):
     self._steps = result.get('steps', [])
     for i, s in enumerate(self._steps):
       s['display_seq'] = i + 1
+      s['on_record'] = self._record
     self.rp_status_steps.items = self._steps
 
     oos = result.get('oos_count', 0)

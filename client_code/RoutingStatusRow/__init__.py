@@ -52,4 +52,5 @@ class RoutingStatusRow(RoutingStatusRowTemplate):
     self.lk_record.set_event_handler('click', self._record_click)
 
   def _record_click(self, **event_args):
-    self.parent.raise_event('x-record', wo_step_id=self.item['wo_step_id'])
+    # Callback, not parent.raise_event - wrapper nesting breaks bubbling
+    self.item['on_record'](self.item['wo_step_id'])
