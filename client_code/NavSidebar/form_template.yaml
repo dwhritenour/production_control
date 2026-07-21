@@ -39,7 +39,7 @@ components:
   name: btn_routing_library
   properties:
     enabled: true
-    icon: fa:money
+    icon: fa:sitemap
     role: elevated-button
     spacing:
       padding: [null, '22', null, '22']
@@ -50,7 +50,7 @@ components:
   name: btn_part_master
   properties:
     enabled: true
-    icon: fa:money
+    icon: fa:cubes
     role: elevated-button
     spacing:
       padding: [null, '35', null, '35']

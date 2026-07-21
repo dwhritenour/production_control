@@ -1,5 +1,6 @@
-<anvil-form container="ColumnPanel">
-  <anvil-component type="ColumnPanel" name="cp_page_root">
+<anvil-form container="HtmlTemplate" prop:html="@theme:standard-page.html">
+  <anvil-component type="Transfer_Dashboard.NavSidebar" name="nav_sidebar" prop:active="sku_details" container:slot="left-nav"></anvil-component>
+  <anvil-component type="ColumnPanel" name="cp_page_root" container:slot="default">
     <!-- Header: search row -->
     <anvil-component type="FlowPanel" name="fp_search" prop:vertical_align="center">
       <anvil-component type="TextBox" name="tb_sku_search" prop:placeholder="Search SKU or description…" container:width="320"></anvil-component>

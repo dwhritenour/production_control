@@ -1,5 +1,6 @@
-<anvil-form container="ColumnPanel">
-  <anvil-component type="ColumnPanel" name="cp_pm_root">
+<anvil-form container="HtmlTemplate" prop:html="@theme:standard-page.html">
+  <anvil-component type="Transfer_Dashboard.NavSidebar" name="nav_sidebar" prop:active="part_master_manager" container:slot="left-nav"></anvil-component>
+  <anvil-component type="ColumnPanel" name="cp_pm_root" container:slot="default">
 
     <anvil-component type="Label" name="lbl_pm_title" prop:text="Part Master — PC-Created SKUs" prop:role="headline" prop:bold="true"></anvil-component>
 

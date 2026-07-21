@@ -9,7 +9,6 @@ class NavSidebar(NavSidebarTemplate):
     'work_orders':            'btn_work_orders',
     'work_orders_condensed':   'btn_work_orders_condensed',
     'sales_orders_due':       'btn_sales_orders',
-    'processed_transfers':    'btn_processed',
     'sku_details':            'btn_routing_library',
     'part_master_manager':    'btn_part_master',
   }
@@ -19,7 +18,6 @@ class NavSidebar(NavSidebarTemplate):
     'btn_work_orders':    'work_orders',
     'btn_work_orders_condensed':    'work_orders_condensed',
     'btn_sales_orders':   'sales_orders_due',
-    'btn_processed':      'processed_transfers',  # fixed 2026-07-21: was inverted
     'btn_routing_library': 'sku_details',
     'btn_part_master':     'part_master_manager',
   }
