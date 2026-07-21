@@ -68,6 +68,8 @@ class sku_details(sku_detailsTemplate):
   # ===================================================================
   def _set_library_chrome(self):
     self.fp_search.visible = True
+    self.tb_sku_search.visible = True
+    self.dd_sku_results.visible = True
     self.lbl_wo_banner.visible = False
     self.lk_view_notes.visible = False
     self.btn_save_release.visible = False
@@ -92,7 +94,11 @@ class sku_details(sku_detailsTemplate):
       f"Qty {wo.get('effective_qty', '')}  |  Due {due}")
     self.lbl_wo_banner.background = '#E3F2FD'   # pale sky blue
     self.lbl_wo_banner.visible = True
-    self.fp_search.visible = False              # locked to this WO's part
+    # WO mode is locked to this WO's part: hide the SEARCH controls only.
+    # fp_search stays visible because it also holds btn_new_sku - minting
+    # a special SKU from a live work order is the primary use case.
+    self.tb_sku_search.visible = False
+    self.dd_sku_results.visible = False
     self.lk_view_notes.visible = True
     self.btn_save_release.visible = True
     self.btn_cancel_wo.visible = True
