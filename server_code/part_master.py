@@ -87,6 +87,13 @@ def _clean_notes(raw):
   return '\n'.join(out).strip()
 
 
+def _norm_attrib(v):
+  """Canonical form for attribute matching: uppercase, whitespace
+  collapsed. Matching keys on attribute_value ONLY (attribute_desc
+  drifts from value in live e21 data)."""
+  return ' '.join((v or '').upper().split())
+
+
 # =============================================================================
 # SKU SEARCH / DETAIL  (all via vw_part_master)
 # =============================================================================
@@ -130,7 +137,8 @@ def get_part_detail(sku):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT sku, part_desc, line, series, model, body_mat,
-               asme_class, end_connect, size, base_sku, sku_source
+               asme_class, end_connect, size, base_sku, attrib_value,
+               sku_source
         FROM dbo.vw_part_master
         WHERE sku = %s
     """, (sku,))
@@ -198,8 +206,9 @@ def create_pc_sku(payload, actor=None):
     cursor.execute("""
         INSERT INTO dbo.pc_part_master
             (sku, part_desc, line, series, model, body_mat, asme_class,
-             end_connect, size, base_sku, special_notes, created_by)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             end_connect, size, base_sku, attrib_value, special_notes,
+             created_by)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """, (sku, part_desc[:150],
           (payload.get('line') or None),
           (payload.get('series') or None),
@@ -209,13 +218,14 @@ def create_pc_sku(payload, actor=None):
           (payload.get('end_connect') or None),
           (payload.get('size') or None),
           (payload.get('base_sku') or None),
+          (_norm_attrib(payload.get('attrib_value'))[:150] or None),
           ((payload.get('special_notes') or '')[:500] or None),
           actor))
     conn.commit()
 
     cursor.execute("""
         SELECT sku, part_desc, line, series, model, body_mat, asme_class,
-               end_connect, size, base_sku, sku_source
+               end_connect, size, base_sku, attrib_value, sku_source
         FROM dbo.vw_part_master WHERE sku = %s
     """, (sku,))
     return {'status': 'success', 'part': serialize_row(cursor.fetchone())}
@@ -271,5 +281,118 @@ def get_so_all_notes(sales_order_number, sales_order_rel):
               'notes': _clean_notes(r['nx_notes'])}
              for r in rows]
     return {'status': 'success', 'header_notes': header, 'lines': lines}
+  finally:
+    conn.close()
+
+
+# =============================================================================
+# PART MASTER MANAGER (list / edit / retire) - SKU codes are IMMUTABLE
+# =============================================================================
+
+# Fields the manager may edit. NOT sku (immutable by policy - templates key
+# on it), NOT exported_to_e21/exported_at (the export project owns those).
+EDITABLE_FIELDS = ('part_desc', 'line', 'series', 'model', 'body_mat',
+                   'asme_class', 'end_connect', 'size', 'base_sku',
+                   'attrib_value', 'special_notes')
+
+
+@anvil.server.callable
+def list_pc_skus(search=None, include_inactive=False, unexported_only=False):
+  """
+    PC-created SKUs for the Part Master Manager grid (TOP 200, newest
+    first). unexported_only=True is the future e21 export batch view.
+  """
+  where = ['1=1']
+  params = []
+  if search and search.strip():
+    like = f'%{search.strip()}%'
+    where.append('(sku LIKE %s OR part_desc LIKE %s OR base_sku LIKE %s '
+                 'OR attrib_value LIKE %s)')
+    params += [like, like, like, like]
+  if not include_inactive:
+    where.append('is_active = 1')
+  if unexported_only:
+    where.append('exported_to_e21 = 0')
+  conn = get_connection()
+  try:
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        SELECT TOP 200 sku, part_desc, series, body_mat, size, base_sku,
+               attrib_value, special_notes, is_active,
+               exported_to_e21, exported_at,
+               created_at, created_by, updated_at, updated_by
+        FROM dbo.pc_part_master
+        WHERE {' AND '.join(where)}
+        ORDER BY created_at DESC
+    """, tuple(params))
+    return [serialize_row(r) for r in cursor.fetchall()]
+  finally:
+    conn.close()
+
+
+@anvil.server.callable
+def update_pc_sku(sku, fields, actor=None):
+  """
+    Edit a PC-created SKU's descriptive fields (whitelist above).
+    attrib_value is normalized on save so matching stays canonical.
+  """
+  actor = (actor or _current_actor())[:50]
+  sets, params = [], []
+  for k in EDITABLE_FIELDS:
+    if k in fields:
+      v = fields[k]
+      if k == 'attrib_value':
+        v = _norm_attrib(v)[:150] or None
+      elif k == 'special_notes':
+        v = ((v or '')[:500] or None)
+      else:
+        v = ((v or '').strip()[:150] or None)
+      sets.append(f'{k} = %s')
+      params.append(v)
+  if not sets:
+    return {'status': 'error', 'message': 'Nothing to update'}
+  sets.append('updated_at = GETDATE()')
+  sets.append('updated_by = %s')
+  params += [actor, sku]
+  conn = get_connection()
+  try:
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        UPDATE dbo.pc_part_master SET {', '.join(sets)} WHERE sku = %s
+    """, tuple(params))
+    if cursor.rowcount == 0:
+      return {'status': 'error', 'message': f'PC SKU {sku} not found'}
+    conn.commit()
+    return {'status': 'success'}
+  except Exception as e:
+    conn.rollback()
+    return {'status': 'error', 'message': f'Error updating SKU: {e}'}
+  finally:
+    conn.close()
+
+
+@anvil.server.callable
+def set_pc_sku_active(sku, active, actor=None):
+  """
+    Soft retire / reinstate a PC SKU. Inactive SKUs drop out of
+    vw_part_master (search, routing lookups, derived-special matching)
+    but their rows, lineage and templates remain for history.
+  """
+  actor = (actor or _current_actor())[:50]
+  conn = get_connection()
+  try:
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE dbo.pc_part_master
+        SET is_active = %s, updated_at = GETDATE(), updated_by = %s
+        WHERE sku = %s
+    """, (1 if active else 0, actor, sku))
+    if cursor.rowcount == 0:
+      return {'status': 'error', 'message': f'PC SKU {sku} not found'}
+    conn.commit()
+    return {'status': 'success'}
+  except Exception as e:
+    conn.rollback()
+    return {'status': 'error', 'message': f'Error: {e}'}
   finally:
     conn.close()

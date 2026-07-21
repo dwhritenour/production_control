@@ -257,6 +257,23 @@ class sku_details(sku_detailsTemplate):
   # Derived specials (§2.5) — suggestion, never substitution
   # ===================================================================
   def _offer_derived_specials(self):
+    # Deterministic attribute match first (v2.1): the server compared the
+    # WO's ORDERED config to each special's stored attributes.
+    matches = [d for d in self._derived if d.get('attrib_match')]
+    if matches:
+      m = matches[0]
+      wo_attrib = self._wo.get('attribute_value') or ''
+      if confirm(f"This order's configuration ({wo_attrib}) exactly "
+                 f"matches PC special {m['sku']} — {m['part_desc']}.\n\n"
+                 f"Load its routing?"):
+        tpl = anvil.server.call('get_template_for_sku', m['sku'])
+        if tpl.get('steps'):
+          self._steps = self._steps_from_rows(tpl['steps'])
+          self._template_target = m['sku']
+          Notification(f"Loaded routing from {m['sku']}").show()
+          self._render()
+      return   # matched (loaded or declined) - no second prompt
+
     with_tpl = [d for d in self._derived if d.get('has_template')]
     if not with_tpl:
       return
@@ -441,13 +458,23 @@ class sku_details(sku_detailsTemplate):
     tb_series = TextBox(placeholder='Series', text=(base.get('series') or ''))
     tb_mat = TextBox(placeholder='Body material', text=(base.get('body_mat') or ''))
     tb_size = TextBox(placeholder='Size', text=(base.get('size') or ''))
+    # Attributes drive the automatic match on future orders. Prefill from
+    # the WO's ORDERED config (WO mode) or the loaded part's attributes.
+    attrib_seed = ''
+    if self._wo:
+      attrib_seed = self._wo.get('attribute_value') or ''
+    if not attrib_seed:
+      attrib_seed = base.get('attrib_value') or ''
+    tb_attrib = TextBox(placeholder='Attributes (MATERIAL | SE), e.g. '
+                        'SS T304 | 1/32 PERF',
+                        text=attrib_seed)
     ta_special = TextArea(placeholder='What makes it special (paste from '
                           'View Notes)', height=90)
     panel = ColumnPanel()
     panel.add_component(Label(
       text=(f"Base SKU: {base.get('sku', '(none)')} — edit the number to "
             f"the e21 pattern; it must be unique."), bold=True))
-    for c in (tb_sku, tb_desc, tb_series, tb_mat, tb_size, ta_special):
+    for c in (tb_sku, tb_desc, tb_series, tb_mat, tb_size, tb_attrib, ta_special):
       panel.add_component(c)
 
     if not alert(content=panel, title="Create PC SKU",
@@ -461,6 +488,7 @@ class sku_details(sku_detailsTemplate):
       'asme_class': base.get('asme_class'),
       'end_connect': base.get('end_connect'),
       'base_sku': base.get('sku'),
+      'attrib_value': tb_attrib.text,
       'special_notes': ta_special.text,
     })
     if result.get('status') != 'success':

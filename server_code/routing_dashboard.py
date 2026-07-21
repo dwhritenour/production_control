@@ -101,6 +101,12 @@ def _actor_or_default(actor):
   return (actor or _current_actor())[:50]
 
 
+def _norm_attrib(v):
+  """Canonical attribute form for matching: uppercase, whitespace
+  collapsed. Keys on attribute_value ONLY (desc drifts in e21 data)."""
+  return ' '.join((v or '').upper().split())
+
+
 # =============================================================================
 # DEPARTMENTS
 # =============================================================================
@@ -152,6 +158,8 @@ def get_routing_for_release(work_order_id):
 
     cursor.execute("""
         SELECT work_order_id, work_order_number, part_number,
+               sales_order_number, sales_order_rel, sales_order_line,
+               attribute_value,
                quantity, wo_override_qty, notes, so_notes,
                wo_due_date, due_date, status
         FROM dbo.work_orders
@@ -166,17 +174,25 @@ def get_routing_for_release(work_order_id):
     # Derived specials (spec v2 §2.5): PC-created SKUs based on this part.
     # WO part_number is NEVER repointed - these only offer a routing to load.
     cursor.execute("""
-        SELECT m.sku, m.part_desc, m.special_notes,
+        SELECT m.sku, m.part_desc, m.special_notes, m.attrib_value,
                CASE WHEN EXISTS (SELECT 1 FROM dbo.pc_routing_templates t
                                  WHERE t.part_number = m.sku
                                    AND t.attribute_value IS NULL
                                    AND t.is_active = 1)
                     THEN 1 ELSE 0 END AS has_template
         FROM dbo.pc_part_master m
-        WHERE m.base_sku = %s
+        WHERE m.base_sku = %s AND m.is_active = 1
         ORDER BY m.created_at
     """, (wo['part_number'],))
     derived = [serialize_row(r) for r in cursor.fetchall()]
+    # Deterministic attribute match (spec v2.1): the ORDERED config on the
+    # WO exactly equals a special's stored attributes -> the page offers a
+    # confident one-click load instead of an 'is it one of these?' list.
+    wo_attrib = _norm_attrib(wo.get('attribute_value'))
+    for d in derived:
+      d['attrib_match'] = 1 if (wo_attrib
+                                and _norm_attrib(d.get('attrib_value')) == wo_attrib
+                                and d.get('has_template')) else 0
 
     # 1. Existing WO routing?
     cursor.execute("""

@@ -1,0 +1,18 @@
+<anvil-form container="ColumnPanel">
+  <anvil-component type="ColumnPanel" name="cp_pm_root">
+
+    <anvil-component type="Label" name="lbl_pm_title" prop:text="Part Master — PC-Created SKUs" prop:role="headline" prop:bold="true"></anvil-component>
+
+    <anvil-component type="FlowPanel" name="fp_pm_filters" prop:vertical_align="center">
+      <anvil-component type="TextBox" name="tb_pm_search" prop:placeholder="Search SKU, description, base SKU, or attributes…" container:width="340"></anvil-component>
+      <anvil-component type="CheckBox" name="cb_show_inactive" prop:text="Show retired"></anvil-component>
+      <anvil-component type="CheckBox" name="cb_export_batch" prop:text="Export batch only (not yet in e21)"></anvil-component>
+      <anvil-component type="Button" name="btn_pm_refresh" prop:text="Refresh" prop:role="outlined-button"></anvil-component>
+    </anvil-component>
+
+    <anvil-component type="Label" name="lbl_pm_count"></anvil-component>
+
+    <anvil-component type="RepeatingPanel" name="rp_pm_rows" prop:item_template="Transfer_Dashboard.PartMasterRow"></anvil-component>
+
+  </anvil-component>
+</anvil-form>

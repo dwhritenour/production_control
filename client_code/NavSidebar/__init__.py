@@ -11,6 +11,7 @@ class NavSidebar(NavSidebarTemplate):
     'sales_orders_due':       'btn_sales_orders',
     'processed_transfers':    'btn_processed',
     'sku_details':            'btn_routing_library',
+    'part_master_manager':    'btn_part_master',
   }
 
   # One handler per button -> one open_form target. Defined ONLY here.
@@ -20,6 +21,7 @@ class NavSidebar(NavSidebarTemplate):
     'btn_sales_orders':   'sales_orders_due',
     'btn_processed':      'processed_transfers',  # fixed 2026-07-21: was inverted
     'btn_routing_library': 'sku_details',
+    'btn_part_master':     'part_master_manager',
   }
 
   def __init__(self, active=None, **properties):
@@ -60,3 +62,13 @@ class NavSidebar(NavSidebarTemplate):
   def active(self, value):
     self._active = value
     self._highlight_active()
+
+  @handle("btn_routing_library", "click")
+  def btn_routing_library_click(self, **event_args):
+    """This method is called when the button is clicked"""
+    pass  # Write Code Here
+
+  @handle("btn_part_master", "click")
+  def btn_part_master_click(self, **event_args):
+    """This method is called when the button is clicked"""
+    pass  # Write Code Here
