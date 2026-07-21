@@ -163,6 +163,21 @@ def get_routing_for_release(work_order_id):
 
     wo['effective_qty'] = wo['wo_override_qty'] or wo['quantity']
 
+    # Derived specials (spec v2 §2.5): PC-created SKUs based on this part.
+    # WO part_number is NEVER repointed - these only offer a routing to load.
+    cursor.execute("""
+        SELECT m.sku, m.part_desc, m.special_notes,
+               CASE WHEN EXISTS (SELECT 1 FROM dbo.pc_routing_templates t
+                                 WHERE t.part_number = m.sku
+                                   AND t.attribute_value IS NULL
+                                   AND t.is_active = 1)
+                    THEN 1 ELSE 0 END AS has_template
+        FROM dbo.pc_part_master m
+        WHERE m.base_sku = %s
+        ORDER BY m.created_at
+    """, (wo['part_number'],))
+    derived = [serialize_row(r) for r in cursor.fetchall()]
+
     # 1. Existing WO routing?
     cursor.execute("""
         SELECT s.wo_step_id, s.sequence_number, s.department_id,
@@ -180,6 +195,7 @@ def get_routing_for_release(work_order_id):
         'source': 'wo',
         'template_id': None,
         'wo': serialize_row(wo),
+        'derived_specials': derived,
         'steps': [serialize_row(r) for r in wo_steps],
       }
 
@@ -202,6 +218,7 @@ def get_routing_for_release(work_order_id):
         'source': 'template',
         'template_id': tpl_steps[0]['template_id'],
         'wo': serialize_row(wo),
+        'derived_specials': derived,
         'steps': [serialize_row(r) for r in tpl_steps],
       }
 
@@ -211,6 +228,7 @@ def get_routing_for_release(work_order_id):
       'source': 'none',
       'template_id': None,
       'wo': serialize_row(wo),
+      'derived_specials': derived,
       'steps': [],
     }
   finally:
@@ -311,10 +329,18 @@ def save_wo_routing(work_order_id, steps, actor=None):
         DELETE FROM dbo.pc_wo_routing_steps WHERE work_order_id = %s
     """, (work_order_id,))
 
-    # Insert re-gapped steps. First sequence is immediately Ready.
-    for i, s in enumerate(steps):
-      seq = (i + 1) * 10
-      status = STATUS_READY if i == 0 else STATUS_PENDING
+    # Re-gap sequence groups (spec v2): steps sharing a seq_group share a
+    # sequence_number (PARALLEL). Falls back to list order when the client
+    # sends no seq_group (v1 dialog compatibility). Every step in the FIRST
+    # group starts Ready - parallel first steps all go live at release.
+    groups = [s.get('seq_group') for s in steps]
+    if any(g is None for g in groups):
+      groups = list(range(1, len(steps) + 1))
+    group_map = {g: (i + 1) * 10 for i, g in enumerate(sorted(set(groups)))}
+    first_seq = 10
+    for s, g in zip(steps, groups):
+      seq = group_map[g]
+      status = STATUS_READY if seq == first_seq else STATUS_PENDING
       cursor.execute("""
           INSERT INTO dbo.pc_wo_routing_steps
               (work_order_id, sequence_number, department_id, status,
@@ -330,7 +356,7 @@ def save_wo_routing(work_order_id, steps, actor=None):
               (wo_step_id, work_order_id, event_type, event_by, notes)
           VALUES (%s, %s, 'Edit', %s, 'release-save')
       """, (wo_step_id, work_order_id, actor))
-      if i == 0:
+      if seq == first_seq:
         cursor.execute("""
             INSERT INTO dbo.pc_wo_routing_step_events
                 (wo_step_id, work_order_id, event_type, event_by, notes)
@@ -339,15 +365,17 @@ def save_wo_routing(work_order_id, steps, actor=None):
 
     # Does the saved routing differ from the active default template?
     cursor.execute("""
-        SELECT s.department_id
+        SELECT s.sequence_number, s.department_id
         FROM dbo.pc_routing_templates t
         JOIN dbo.pc_routing_template_steps s ON s.template_id = t.template_id
         WHERE t.part_number = %s AND t.attribute_value IS NULL AND t.is_active = 1
         ORDER BY s.sequence_number, s.template_step_id
     """, (wo['part_number'],))
-    tpl_depts = [r['department_id'] for r in cursor.fetchall()]
-    saved_depts = [s['department_id'] for s in steps]
-    template_differs = (tpl_depts != saved_depts)
+    tpl_pairs = sorted((r['sequence_number'], r['department_id'])
+                       for r in cursor.fetchall())
+    saved_pairs = sorted(zip((group_map[g] for g in groups),
+                             (s['department_id'] for s in steps)))
+    template_differs = (tpl_pairs != saved_pairs)
 
     conn.commit()
     return {'status': 'success',
@@ -409,12 +437,17 @@ def save_routing_template(part_number, steps, actor=None):
       """, (part_number, actor))
       template_id = cursor.fetchone()['template_id']
 
-    for i, s in enumerate(steps):
+    # Same group mapping as save_wo_routing: shared seq_group = parallel.
+    groups = [s.get('seq_group') for s in steps]
+    if any(g is None for g in groups):
+      groups = list(range(1, len(steps) + 1))
+    group_map = {g: (i + 1) * 10 for i, g in enumerate(sorted(set(groups)))}
+    for s, g in zip(steps, groups):
       cursor.execute("""
           INSERT INTO dbo.pc_routing_template_steps
               (template_id, sequence_number, department_id, step_notes)
           VALUES (%s, %s, %s, %s)
-      """, (template_id, (i + 1) * 10, s['department_id'],
+      """, (template_id, group_map[g], s['department_id'],
             (s.get('step_notes') or None)))
 
     conn.commit()
@@ -684,5 +717,40 @@ def reset_steps_for_rework(work_order_id, from_sequence, actor=None):
   except Exception as e:
     conn.rollback()
     return {'status': 'error', 'message': f'Error resetting steps: {e}'}
+  finally:
+    conn.close()
+
+
+# =============================================================================
+# GET TEMPLATE FOR SKU (Routing Library mode + derived-specials load)
+# =============================================================================
+
+@anvil.server.callable
+def get_template_for_sku(sku):
+  """
+    Default routing template for any SKU (LIBRARY mode browsing, and
+    loading a derived special's routing from the §2.5 suggestion banner).
+
+    Returns:
+        {status, template_id (or None), steps[{sequence_number,
+         department_id, department_name, step_notes}]}
+  """
+  conn = get_connection()
+  try:
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT t.template_id, s.sequence_number, s.department_id,
+               d.department_name, s.step_notes
+        FROM dbo.pc_routing_templates t
+        JOIN dbo.pc_routing_template_steps s ON s.template_id = t.template_id
+        JOIN dbo.pc_departments d ON d.department_id = s.department_id
+        WHERE t.part_number = %s AND t.attribute_value IS NULL
+          AND t.is_active = 1
+        ORDER BY s.sequence_number, s.template_step_id
+    """, (sku,))
+    rows = cursor.fetchall()
+    return {'status': 'success',
+            'template_id': rows[0]['template_id'] if rows else None,
+            'steps': [serialize_row(r) for r in rows]}
   finally:
     conn.close()
