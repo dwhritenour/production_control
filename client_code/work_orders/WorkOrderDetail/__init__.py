@@ -149,7 +149,10 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
       return
 
     # Routing v2: the SKU Details page owns routing + release.
-    self.raise_event('x-close')
+    # No 'x-close' here: we are NAVIGATING AWAY, and the host row's
+    # refresh handler would run get_open_form().refresh_data() against
+    # sku_details (which has no refresh_data). Just dismiss + navigate.
+    self.raise_event('x-close-alert')    # DISMISS this popup (Anvil built-in)
     open_form('sku_details',
               work_order_id=self._item['work_order_id'],
               wo_queue=[])
@@ -235,7 +238,10 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
     ):
       return
 
-    self.raise_event('x-close')
+    # No 'x-close' here: we are NAVIGATING AWAY, and the host row's
+    # refresh handler would run get_open_form().refresh_data() against
+    # sku_details (which has no refresh_data). Just dismiss + navigate.
+    self.raise_event('x-close-alert')    # DISMISS this popup (Anvil built-in)
     open_form('sku_details',
               work_order_id=wos[0]['work_order_id'],
               wo_queue=wos[1:])

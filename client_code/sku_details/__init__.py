@@ -242,7 +242,10 @@ class sku_details(sku_detailsTemplate):
           out.append(f'<line x1="{xa:.0f}" y1="{bot}" x2="{xb:.0f}" y2="{top - 2}" '
                      f'stroke="#666666" stroke-width="2" marker-end="url(#arw)"/>')
     out.append('</svg>')
-    return ''.join(out)
+    # Wrap in a div: Anvil's HTML component sets className on the root
+    # element, and SVG roots expose className as READ-ONLY (browser
+    # TypeError). A div root keeps Anvil happy; the SVG lives inside it.
+    return '<div>' + ''.join(out) + '</div>'
 
   # ===================================================================
   # Derived specials (§2.5) — suggestion, never substitution
