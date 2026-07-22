@@ -70,3 +70,8 @@ class NavSidebar(NavSidebarTemplate):
   def btn_part_master_click(self, **event_args):
     """This method is called when the button is clicked"""
     pass  # Write Code Here
+
+  @handle("btn_change_log", "click")
+  def btn_change_log_click(self, **event_args):
+    """This method is called when the button is clicked"""
+    pass  # Write Code Here

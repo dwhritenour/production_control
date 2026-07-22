@@ -56,6 +56,17 @@ components:
       padding: [null, '35', null, '35']
     text: Part Master
   type: Button
+- event_bindings: {}
+  layout_properties: {grid_position: 'XVROFK,DNLHRC'}
+  name: btn_change_log
+  properties:
+    enabled: true
+    icon: fa:exchange
+    role: elevated-button
+    spacing:
+      padding: [null, '36', null, '36']
+    text: Change Log
+  type: Button
 container: {type: ColumnPanel}
 custom_component: true
 is_package: true
