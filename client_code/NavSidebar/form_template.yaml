@@ -61,7 +61,7 @@ components:
   name: btn_change_log
   properties:
     enabled: true
-    icon: fa:exchange
+    icon: fa:history
     role: elevated-button
     spacing:
       padding: [null, '36', null, '36']
