@@ -1,6 +1,7 @@
 from ._anvil_designer import NavSidebarTemplate
 from anvil import *
 import anvil.server
+import anvil.js
 
 
 class NavSidebar(NavSidebarTemplate):
@@ -22,6 +23,13 @@ class NavSidebar(NavSidebarTemplate):
     'btn_part_master':     'part_master_manager',
   }
 
+  # External apps -> open in a NEW TAB. open_form only navigates within
+  # THIS app; another developer's published app is its own Anvil session,
+  # so the browser handles it and our user keeps their place here.
+  _EXTERNAL_TARGETS = {
+    'btn_change_log': 'https://titan-change-log.anvil.app/',
+  }
+
   def __init__(self, active=None, **properties):
     self.init_components(**properties)
     self._active = active
@@ -32,11 +40,22 @@ class NavSidebar(NavSidebarTemplate):
       if btn is not None:
         btn.set_event_handler('click', self._make_nav_handler(target))
 
+    # Wire external-app buttons (new browser tab).
+    for btn_name, url in self._EXTERNAL_TARGETS.items():
+      btn = getattr(self, btn_name, None)
+      if btn is not None:
+        btn.set_event_handler('click', self._make_external_handler(url))
+
     self._highlight_active()
 
   def _make_nav_handler(self, target_form):
     def handler(**event_args):
       open_form(target_form)
+    return handler
+
+  def _make_external_handler(self, url):
+    def handler(**event_args):
+      anvil.js.window.open(url, '_blank')
     return handler
 
   def _highlight_active(self):
@@ -60,18 +79,3 @@ class NavSidebar(NavSidebarTemplate):
   def active(self, value):
     self._active = value
     self._highlight_active()
-
-  @handle("btn_routing_library", "click")
-  def btn_routing_library_click(self, **event_args):
-    """This method is called when the button is clicked"""
-    pass  # Write Code Here
-
-  @handle("btn_part_master", "click")
-  def btn_part_master_click(self, **event_args):
-    """This method is called when the button is clicked"""
-    pass  # Write Code Here
-
-  @handle("btn_change_log", "click")
-  def btn_change_log_click(self, **event_args):
-    """This method is called when the button is clicked"""
-    pass  # Write Code Here
