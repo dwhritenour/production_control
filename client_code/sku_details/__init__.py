@@ -235,7 +235,12 @@ class sku_details(sku_detailsTemplate):
     per department (ALL lanes, always - spatial consistency), flow top
     to bottom, nodes carry A01.01 codes. Redraws on every change."""
     lanes = self._departments                     # sort_order = lane order
-    LW, HH, NW, NH, VGAP, PAD = 140, 34, 112, 40, 34, 8
+    LW, NW, NH, VGAP, PAD = 140, 112, 40, 34, 8
+    # Header: big letter on top, then EACH WORD of the department name on
+    # its own line (Dave's format, 2026-07-22). Height fits the wordiest name.
+    max_words = max((len(d['department_name'].split()) for d in lanes),
+                    default=1)
+    HH = 24 + max_words * 13 + 5
     width = len(lanes) * LW
     lane_x = {d['department_id']: i for i, d in enumerate(lanes)}
 
@@ -300,12 +305,20 @@ class sku_details(sku_detailsTemplate):
       fill, stroke = self._LANE_COLORS.get(code, ('#F5F5F5', '#616161'))
       chrome.append(f'<rect x="{x}" y="0" width="{LW}" height="{HH}" '
                     f'fill="{fill}" stroke="#BBBBBB" stroke-width="1"/>')
-      name = d['department_name']
-      if len(name) > 16:
-        name = name[:15] + '\u2026'
-      chrome.append(f'<text x="{x + LW/2}" y="{HH/2 + 4}" font-size="11" '
+      # Header format: the letter alone on top (prominent), then each word
+      # of the department name on its own line beneath it - no truncation.
+      # The whole block is VERTICALLY CENTERED within the header band, so
+      # short names (Assemble) sit as neatly as long ones (Material Handling).
+      words = d['department_name'].split()
+      block = 17 + len(words) * 13          # letter line + word lines
+      y0 = (HH - block) / 2
+      chrome.append(f'<text x="{x + LW/2}" y="{y0 + 14:.0f}" font-size="15" '
                     f'font-weight="bold" fill="{stroke}" text-anchor="middle">'
-                    f'{code} - {name}</text>')
+                    f'{code}</text>')
+      for wi, word in enumerate(words):
+        chrome.append(f'<text x="{x + LW/2}" y="{y0 + 28 + wi * 13:.0f}" '
+                      f'font-size="11" font-weight="bold" fill="{stroke}" '
+                      f'text-anchor="middle">{word}</text>')
       chrome.append(f'<line x1="{x}" y1="0" x2="{x}" y2="{height}" '
                     f'stroke="#DDDDDD" stroke-width="1"/>')
     chrome.append(f'<rect x="0" y="0" width="{width}" height="{height}" '
@@ -534,10 +547,10 @@ class sku_details(sku_detailsTemplate):
     if not attrib_seed:
       attrib_seed = base.get('attrib_value') or ''
     tb_attrib = TextBox(placeholder='Attributes (MATERIAL | SE), e.g. '
-                        'SS T304 | 1/32 PERF',
+                                    'SS T304 | 1/32 PERF',
                         text=attrib_seed)
     ta_special = TextArea(placeholder='What makes it special (paste from '
-                          'View Notes)', height=90)
+                                      'View Notes)', height=90)
     panel = ColumnPanel()
     panel.add_component(Label(
       text=(f"Base SKU: {base.get('sku', '(none)')} — edit the number to "
