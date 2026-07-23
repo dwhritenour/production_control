@@ -34,6 +34,8 @@ class sku_details(sku_detailsTemplate):
                       for d in self._departments]
     self._dept_names = {d['department_id']: d['department_name']
                         for d in self._departments}
+    self._dept_codes = {d['department_id']: (d.get('dept_code') or '?')
+                        for d in self._departments}
 
     # Events (all wiring in code — shells are layout-only)
     self.tb_sku_search.set_event_handler('pressed_enter', self._search)
@@ -176,12 +178,27 @@ class sku_details(sku_detailsTemplate):
              'step_notes': (r.get('step_notes') or '')}
             for r in rows]
 
+  def _step_codes(self):
+    """A01.01 codes for the (sorted) working list. Letter = department,
+    2-digit = routing step (sequence group), .2-digit = ordinal within
+    (department, group) - reserved for process steps later."""
+    disp = {g: i + 1 for i, g in enumerate(sorted({s['seq'] for s in self._steps}))}
+    counters, codes = {}, []
+    for s in self._steps:
+      gd = disp[s['seq']]
+      key = (s['department_id'], gd)
+      counters[key] = counters.get(key, 0) + 1
+      letter = self._dept_codes.get(s['department_id'], '?')
+      codes.append(f"{letter}{gd:02d}.{counters[key]:02d}")
+    return codes
+
   def _render(self):
     self._steps.sort(key=lambda s: s['seq'])   # stable: keeps entry order in group
+    codes = self._step_codes()
     self.rp_steps.items = [
       {'index': i, 'seq': s['seq'], 'department_id': s['department_id'],
        'step_notes': s['step_notes'], 'dd_items': self._dd_items,
-       'step_ref': s,
+       'step_ref': s, 'code': codes[i],
        'on_change': self._step_changed, 'on_remove': self._remove_step}
       for i, s in enumerate(self._steps)]
     has_steps = bool(self._steps)
@@ -204,54 +221,105 @@ class sku_details(sku_detailsTemplate):
   # ===================================================================
   # Flow diagram (client-built SVG — redraws on every change)
   # ===================================================================
+  # Lane colors keyed by dept_code: (node fill, stroke/header text).
+  # Identity is carried by the letter + header TEXT - color is decoration.
+  _LANE_COLORS = {
+    'A': ('#FCE4E4', '#C62828'), 'B': ('#FCE4F1', '#AD1457'),
+    'C': ('#EDE7F6', '#6A1B9A'), 'D': ('#E8EAF6', '#283593'),
+    'E': ('#E3F2FD', '#1565C0'), 'F': ('#E0F2F1', '#00695C'),
+    'G': ('#E8F5E9', '#2E7D32'), 'H': ('#FFF3E0', '#EF6C00'),
+  }
+
   def _build_svg(self):
+    """Swim-lane routing diagram (Dave's sample, 2026-07-22): one lane
+    per department (ALL lanes, always - spatial consistency), flow top
+    to bottom, nodes carry A01.01 codes. Redraws on every change."""
+    lanes = self._departments                     # sort_order = lane order
+    LW, HH, NW, NH, VGAP, PAD = 140, 34, 112, 40, 34, 8
+    width = len(lanes) * LW
+    lane_x = {d['department_id']: i for i, d in enumerate(lanes)}
+
     if not self._steps:
       return ('<div style="color:#999999;font-style:italic;padding:24px;'
               'font-family:Arial;">Add steps to see the flow</div>')
-    bands = {}
-    for s in self._steps:
-      bands.setdefault(s['seq'], []).append(s)
-    order = sorted(bands.keys())
-    NW, NH, VGAP, HGAP, PAD = 150, 44, 48, 14, 10
-    max_n = max(len(v) for v in bands.values())
-    width = max(340, max_n * (NW + HGAP) - HGAP + 2 * PAD)
-    height = len(order) * NH + (len(order) - 1) * VGAP + 2 * PAD
-    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
-           f'style="width:100%;max-width:{width}px;font-family:Arial;">',
+
+    codes = self._step_codes()
+    disp = {g: i + 1 for i, g in enumerate(sorted({s['seq'] for s in self._steps}))}
+    # group -> {lane_index: [(step, code), ...]}
+    groups = {}
+    for s, c in zip(self._steps, codes):
+      gd = disp[s['seq']]
+      li = lane_x.get(s['department_id'], 0)
+      groups.setdefault(gd, {}).setdefault(li, []).append((s, c))
+
+    body = []
+    # Lane headers + separators (heights fixed after we know total height)
+    y = HH + PAD
+    node_rows = []                                # per group: list of node dicts
+    for gd in sorted(groups.keys()):
+      lanes_here = groups[gd]
+      depth = max(len(v) for v in lanes_here.values())
+      nodes = []
+      for li, entries in lanes_here.items():
+        for k, (s, code) in enumerate(entries):
+          nx = li * LW + (LW - NW) / 2
+          ny = y + k * (NH + 6)
+          d = lanes[li]
+          fill, stroke = self._LANE_COLORS.get(d.get('dept_code') or '?',
+                                               ('#F5F5F5', '#616161'))
+          note = (s.get('step_notes') or '').strip()
+          if len(note) > 16:
+            note = note[:15] + '\u2026'
+          body.append(f'<rect x="{nx:.0f}" y="{ny:.0f}" width="{NW}" height="{NH}" '
+                      f'rx="8" fill="{fill}" stroke="{stroke}" stroke-width="1.5"/>')
+          body.append(f'<text x="{nx + NW/2:.0f}" y="{ny + 16:.0f}" font-size="12" '
+                      f'font-weight="bold" fill="#212121" text-anchor="middle">{code}</text>')
+          if note:
+            body.append(f'<text x="{nx + NW/2:.0f}" y="{ny + 31:.0f}" font-size="9" '
+                        f'fill="#595959" text-anchor="middle">{note}</text>')
+          nodes.append({'cx': nx + NW / 2, 'top': ny, 'bottom': ny + NH})
+      node_rows.append(nodes)
+      y += depth * (NH + 6) + VGAP
+    height = y + PAD
+
+    # Orthogonal arrows: every node in group i -> every node in group i+1
+    for i in range(len(node_rows) - 1):
+      for a in node_rows[i]:
+        for b in node_rows[i + 1]:
+          mid = b['top'] - 12
+          body.append(f'<polyline points="{a["cx"]:.0f},{a["bottom"]:.0f} '
+                      f'{a["cx"]:.0f},{mid:.0f} {b["cx"]:.0f},{mid:.0f} '
+                      f'{b["cx"]:.0f},{b["top"] - 2:.0f}" fill="none" '
+                      f'stroke="#666666" stroke-width="1.5" marker-end="url(#arw)"/>')
+
+    # Lanes: separators full height + colored headers with letter-name text
+    chrome = []
+    for i, d in enumerate(lanes):
+      x = i * LW
+      code = d.get('dept_code') or '?'
+      fill, stroke = self._LANE_COLORS.get(code, ('#F5F5F5', '#616161'))
+      chrome.append(f'<rect x="{x}" y="0" width="{LW}" height="{HH}" '
+                    f'fill="{fill}" stroke="#BBBBBB" stroke-width="1"/>')
+      name = d['department_name']
+      if len(name) > 16:
+        name = name[:15] + '\u2026'
+      chrome.append(f'<text x="{x + LW/2}" y="{HH/2 + 4}" font-size="11" '
+                    f'font-weight="bold" fill="{stroke}" text-anchor="middle">'
+                    f'{code} - {name}</text>')
+      chrome.append(f'<line x1="{x}" y1="0" x2="{x}" y2="{height}" '
+                    f'stroke="#DDDDDD" stroke-width="1"/>')
+    chrome.append(f'<rect x="0" y="0" width="{width}" height="{height}" '
+                  f'fill="none" stroke="#BBBBBB" stroke-width="1.5"/>')
+
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
+           f'style="width:100%;font-family:Arial;">'
            '<defs><marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" '
            'markerWidth="6" markerHeight="6" orient="auto">'
-           '<path d="M0 0L10 5L0 10z" fill="#666666"/></marker></defs>']
-    centers = []   # per band: (list of x-centers, top_y, bottom_y)
-    for bi, key in enumerate(order):
-      row = bands[key]
-      row_w = len(row) * (NW + HGAP) - HGAP
-      x0 = (width - row_w) / 2
-      y = PAD + bi * (NH + VGAP)
-      xs = []
-      for ni, s in enumerate(row):
-        x = x0 + ni * (NW + HGAP)
-        name = self._dept_names.get(s['department_id'], '(pick dept)')
-        label = f"{bi + 1}. {name}"
-        if len(label) > 19:
-          label = label[:18] + '…'
-        out.append(f'<rect x="{x:.0f}" y="{y}" width="{NW}" height="{NH}" rx="10" '
-                   f'fill="#E3F2FD" stroke="#1565C0" stroke-width="2"/>')
-        out.append(f'<text x="{x + NW/2:.0f}" y="{y + NH/2 + 5}" font-size="13" '
-                   f'fill="#212121" text-anchor="middle">{label}</text>')
-        xs.append(x + NW / 2)
-      centers.append((xs, y, y + NH))
-    for bi in range(len(centers) - 1):
-      xs_a, _, bot = centers[bi]
-      xs_b, top, _ = centers[bi + 1]
-      for xa in xs_a:
-        for xb in xs_b:
-          out.append(f'<line x1="{xa:.0f}" y1="{bot}" x2="{xb:.0f}" y2="{top - 2}" '
-                     f'stroke="#666666" stroke-width="2" marker-end="url(#arw)"/>')
-    out.append('</svg>')
-    # Wrap in a div: Anvil's HTML component sets className on the root
-    # element, and SVG roots expose className as READ-ONLY (browser
-    # TypeError). A div root keeps Anvil happy; the SVG lives inside it.
-    return '<div>' + ''.join(out) + '</div>'
+           '<path d="M0 0L10 5L0 10z" fill="#666666"/></marker></defs>'
+           + ''.join(chrome) + ''.join(body) + '</svg>')
+    # Div wrap: Anvil's HTML component sets className on the root element,
+    # and SVG roots expose className as READ-ONLY (browser TypeError).
+    return '<div>' + svg + '</div>'
 
   # ===================================================================
   # Derived specials (§2.5) — suggestion, never substitution

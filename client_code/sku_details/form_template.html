@@ -2,35 +2,39 @@
   <anvil-component type="Transfer_Dashboard.NavSidebar" name="nav_sidebar" prop:active="sku_details" container:slot="left-nav"></anvil-component>
   <anvil-component type="ColumnPanel" name="cp_page_root" container:slot="default">
     <!-- Header: search row -->
-    <anvil-component type="FlowPanel" name="fp_search" prop:vertical_align="center">
+    <anvil-component type="FlowPanel" name="fp_search" prop:vertical_align="center" container:grid_position="FQKARU,XTBSRA" container:full_width_row="true">
       <anvil-component type="TextBox" name="tb_sku_search" prop:placeholder="Search SKU or description…" container:width="320"></anvil-component>
       <anvil-component type="DropDown" name="dd_sku_results" container:width="420"></anvil-component>
       <anvil-component type="Button" name="btn_new_sku" prop:text="+ New SKU" prop:role="outlined-button"></anvil-component>
     </anvil-component>
-    <anvil-component type="Label" name="lbl_wo_banner" prop:visible="false"></anvil-component>
-    <anvil-component type="Label" name="lbl_sku_title" prop:role="headline" prop:bold="true"></anvil-component>
-    <anvil-component type="FlowPanel" name="fp_sku_line" prop:vertical_align="center">
-      <anvil-component type="Label" name="lbl_part_desc"></anvil-component>
-      <anvil-component type="Label" name="lbl_sku_source"></anvil-component>
-      <anvil-component type="Link" name="lk_view_notes" prop:text="View Notes" prop:visible="false"></anvil-component>
+    <anvil-component type="ColumnPanel" name="oc_sku" prop:role="outlined-card" container:grid_position="ZWQFOP,CNOQLV" container:full_width_row="true">
+      <anvil-component type="Label" name="lbl_sku_cap" prop:text="SKU Details" prop:bold="true" prop:font_size="null" prop:role="title" container:grid_position="CIHBWC,WFDLYN" container:full_width_row="true"></anvil-component>
+      <anvil-component type="Label" name="lbl_wo_banner" prop:visible="false" prop:spacing='{"margin":["0",null,"0",null]}' container:grid_position="VYREIA,MKJPHZ" container:full_width_row="true"></anvil-component>
+      <anvil-component type="Label" name="lbl_sku_title" prop:role="null" prop:bold="true" prop:font_size="-1" prop:spacing='{"margin":["0",null,"0",null]}' container:grid_position="URTJBP,RAQAWG" container:full_width_row="true"></anvil-component>
+      <anvil-component type="FlowPanel" name="fp_sku_line" prop:vertical_align="center" prop:spacing='{"margin":["0",null,"0",null]}' container:grid_position="URHNYM,FQATJS" container:full_width_row="true">
+        <anvil-component type="Label" name="lbl_part_desc" prop:spacing='{"margin":["0",null,"0",null]}'></anvil-component>
+        <anvil-component type="Label" name="lbl_sku_source" prop:spacing='{"margin":["0",null,"0",null]}'></anvil-component>
+        <anvil-component type="Link" name="lk_view_notes" prop:text="View Notes" prop:visible="false" prop:spacing='{"margin":["0",null,"0",null]}'></anvil-component>
+      </anvil-component>
     </anvil-component>
     <!-- Body: two columns side by side -->
-    <anvil-component type="GridPanel" name="gp_body">
-      <anvil-component type="ColumnPanel" name="cp_routing_col" container:row="body_row" container:col_xs="0" container:width_xs="7">
-        <anvil-component type="Label" name="lbl_routing_cap" prop:text="Routing" prop:bold="true"></anvil-component>
+    <anvil-component type="GridPanel" name="gp_body" container:grid_position="WPFHFB,TNIYLT" container:full_width_row="true">
+      <anvil-component type="ColumnPanel" name="cp_routing_col" prop:role="outlined-card" prop:spacing='{"padding":["4",null,"4",null]}' container:row="body_row" container:col_xs="0" container:width_xs="5">
+        <anvil-component type="Label" name="lbl_routing_cap" prop:text="Routing" prop:bold="true" prop:font_size="null" prop:role="title" prop:spacing='{"margin":["0",null,null,null],"padding":["0",null,null,null]}' container:grid_position="ESTUGR,SJUKIC" container:full_width_row="true"></anvil-component>
         <anvil-component type="RepeatingPanel" name="rp_steps" prop:item_template="Transfer_Dashboard.RoutingStepRow2"></anvil-component>
-        <anvil-component type="Button" name="btn_add_step" prop:text="+ Add Step" prop:role="outlined-button"></anvil-component>
+        <anvil-component type="Button" name="btn_add_step" prop:text="+ Add Step" prop:role="outlined-button" prop:align="left" container:grid_position="KANNXK,LGDVUH"></anvil-component>
       </anvil-component>
-      <anvil-component type="ColumnPanel" name="cp_diagram_col" container:row="body_row" container:col_xs="7" container:width_xs="5">
-        <anvil-component type="Label" name="lbl_diagram_cap" prop:text="Diagram" prop:bold="true"></anvil-component>
-        <div style="height: 500px; min-height: 500px;" anvil:name="html_diagram"></div>
+      <anvil-component type="ColumnPanel" name="cp_diagram_col" prop:role="outlined-card" prop:spacing='{"padding":["4",null,"4",null]}' container:row="body_row" container:width_xs="7" container:col_xs="5">
+        <anvil-component type="Label" name="lbl_diagram_cap" prop:text="Diagram" prop:bold="true" prop:role="title" prop:spacing='{"margin":["0",null,null,null],"padding":["0",null,null,null]}' container:full_width_row="true"></anvil-component>
+        <div style="height: 500px; min-height: 500px;" anvil:name="html_diagram" anvil:container:full_width_row="true"></div>
       </anvil-component>
     </anvil-component>
     <!-- Actions -->
-    <anvil-component type="FlowPanel" name="fp_actions" prop:align="right">
+    <anvil-component type="FlowPanel" name="fp_actions" prop:align="left" container:grid_position="SFUBRN,SNPBPK" container:full_width_row="true">
       <anvil-component type="Button" name="btn_save_template" prop:text="Save as Default Routing" prop:role="outlined-button"></anvil-component>
       <anvil-component type="Button" name="btn_save_release" prop:text="Save Routing &amp; Release" prop:role="filled-button" prop:visible="false"></anvil-component>
       <anvil-component type="Button" name="btn_cancel_wo" prop:text="Cancel Release" prop:role="outlined-button" prop:visible="false"></anvil-component>
     </anvil-component>
   </anvil-component>
+  <anvil-component type="Label" name="lbl_routing_library" prop:text="Routing Library" prop:bold="true" container:slot="title"></anvil-component>
 </anvil-form>

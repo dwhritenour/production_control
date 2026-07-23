@@ -123,7 +123,7 @@ def get_departments():
   try:
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT department_id, department_name
+        SELECT department_id, department_name, dept_code
         FROM dbo.pc_departments
         WHERE is_active = 1
         ORDER BY sort_order, department_name
@@ -493,7 +493,8 @@ def get_wo_routing(work_order_id):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT s.wo_step_id, s.sequence_number, s.department_id,
-               d.department_name, s.status, s.qty_required, s.qty_completed,
+               d.department_name, d.dept_code,
+               s.status, s.qty_required, s.qty_completed,
                s.step_notes,
                (SELECT COUNT(*) FROM dbo.pc_wo_routing_step_events e
                 WHERE e.wo_step_id = s.wo_step_id
