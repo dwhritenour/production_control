@@ -33,8 +33,19 @@ class routing_status(routing_statusTemplate):
       return
 
     self._steps = result.get('steps', [])
+    # A01.01 codes: letter from dept_code, 2-digit routing step (sequence
+    # group), .2-digit = that DEPARTMENT'S step count across the whole
+    # routing (F04.01 then F05.02).
+    disp = {g: i + 1 for i, g in enumerate(
+      sorted({s['sequence_number'] for s in self._steps}))}
+    counters = {}
     for i, s in enumerate(self._steps):
       s['display_seq'] = i + 1
+      gd = disp[s['sequence_number']]
+      dept = s['department_id']
+      counters[dept] = counters.get(dept, 0) + 1
+      s['step_code'] = (f"{(s.get('dept_code') or '?')}"
+                        f"{gd:02d}.{counters[dept]:02d}")
       s['on_record'] = self._record
     self.rp_status_steps.items = self._steps
 

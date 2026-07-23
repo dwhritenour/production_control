@@ -180,16 +180,17 @@ class sku_details(sku_detailsTemplate):
 
   def _step_codes(self):
     """A01.01 codes for the (sorted) working list. Letter = department,
-    2-digit = routing step (sequence group), .2-digit = ordinal within
-    (department, group) - reserved for process steps later."""
+    2-digit = routing step (sequence group), .2-digit = that DEPARTMENT'S
+    step count across the WHOLE routing (Dave 2026-07-23: F04.01 then
+    F05.02 - Material Handling's first and second steps)."""
     disp = {g: i + 1 for i, g in enumerate(sorted({s['seq'] for s in self._steps}))}
     counters, codes = {}, []
     for s in self._steps:
       gd = disp[s['seq']]
-      key = (s['department_id'], gd)
-      counters[key] = counters.get(key, 0) + 1
-      letter = self._dept_codes.get(s['department_id'], '?')
-      codes.append(f"{letter}{gd:02d}.{counters[key]:02d}")
+      dept = s['department_id']
+      counters[dept] = counters.get(dept, 0) + 1
+      letter = self._dept_codes.get(dept, '?')
+      codes.append(f"{letter}{gd:02d}.{counters[dept]:02d}")
     return codes
 
   def _render(self):
@@ -547,10 +548,10 @@ class sku_details(sku_detailsTemplate):
     if not attrib_seed:
       attrib_seed = base.get('attrib_value') or ''
     tb_attrib = TextBox(placeholder='Attributes (MATERIAL | SE), e.g. '
-                                    'SS T304 | 1/32 PERF',
+                        'SS T304 | 1/32 PERF',
                         text=attrib_seed)
     ta_special = TextArea(placeholder='What makes it special (paste from '
-                                      'View Notes)', height=90)
+                          'View Notes)', height=90)
     panel = ColumnPanel()
     panel.add_component(Label(
       text=(f"Base SKU: {base.get('sku', '(none)')} — edit the number to "
