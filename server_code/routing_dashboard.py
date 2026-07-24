@@ -591,69 +591,53 @@ def record_step_event(wo_step_id, event_type, qty=None, actor=None, notes=None):
     earlier = [s for s in siblings
                if s['sequence_number'] < step['sequence_number']]
 
-    # --- OOS determination ---
+    # --- Complete goes through THE single write path (migration 007):
+    # sp_pc_complete_step owns qty update, OOS flagging, Ready cascade,
+    # WO auto-complete and notification queueing for ALL apps. ---
     if event_type == 'Complete':
-      new_total = step['qty_completed'] + qty
-      oos = any(s['status'] != STATUS_SKIPPED and s['qty_completed'] < new_total
-                for s in earlier)
-    else:
-      oos = any(s['status'] not in (STATUS_COMPLETE, STATUS_SKIPPED)
-                for s in earlier)
+      cursor.execute("""
+          EXEC dbo.sp_pc_complete_step @wo_step_id=%s, @qty=%s,
+                                       @actor=%s, @notes=%s
+      """, (wo_step_id, qty, actor, (notes or None)))
+      proc = cursor.fetchone()
+      conn.commit()
+      if proc.get('status') != 'success':
+        return {'status': 'error',
+                'message': proc.get('message', 'Completion failed')}
+      cursor.execute("""
+          SELECT s.wo_step_id, s.sequence_number, s.department_id,
+                 d.department_name, s.status, s.qty_required, s.qty_completed
+          FROM dbo.pc_wo_routing_steps s
+          JOIN dbo.pc_departments d ON d.department_id = s.department_id
+          WHERE s.wo_step_id = %s
+      """, (wo_step_id,))
+      return {'status': 'success',
+              'step': serialize_row(cursor.fetchone()),
+              'oos': bool(proc.get('out_of_sequence')),
+              'wo_complete': bool(proc.get('wo_complete'))}
 
-    # --- Apply the event ---
-    if event_type == 'Complete':
-      new_total = step['qty_completed'] + qty
-      new_status = (STATUS_COMPLETE if new_total >= step['qty_required']
-                    else STATUS_IN_PROGRESS)
-      cursor.execute("""
-          UPDATE dbo.pc_wo_routing_steps
-          SET qty_completed = %s, status = %s WHERE wo_step_id = %s
-      """, (new_total, new_status, wo_step_id))
-    elif event_type == 'Start':
+    # --- Start / Skip: local, no notifications (PC-only actions). ---
+    # OOS flag for the event row (record-and-flag).
+    oos = any(s['status'] not in (STATUS_COMPLETE, STATUS_SKIPPED)
+              for s in earlier)
+    # NOTE (known gap, acceptable for 2-step test): Skip does NOT run the
+    # Ready cascade or queue notifications. If PC skips a mid-routing
+    # step, use Record on the next step or Reset for Rework to unblock.
+    if event_type == 'Start':
       new_status = STATUS_IN_PROGRESS
-      cursor.execute("""
-          UPDATE dbo.pc_wo_routing_steps
-          SET status = %s WHERE wo_step_id = %s
-      """, (new_status, wo_step_id))
     else:  # Skip
       new_status = STATUS_SKIPPED
-      cursor.execute("""
-          UPDATE dbo.pc_wo_routing_steps
-          SET status = %s WHERE wo_step_id = %s
-      """, (new_status, wo_step_id))
-
+    cursor.execute("""
+        UPDATE dbo.pc_wo_routing_steps
+        SET status = %s WHERE wo_step_id = %s
+    """, (new_status, wo_step_id))
     cursor.execute("""
         INSERT INTO dbo.pc_wo_routing_step_events
             (wo_step_id, work_order_id, event_type, qty,
              out_of_sequence, event_by, notes)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """, (wo_step_id, work_order_id, event_type, qty,
+        VALUES (%s, %s, %s, NULL, %s, %s, %s)
+    """, (wo_step_id, work_order_id, event_type,
           1 if oos else 0, actor, (notes or None)))
-
-    # --- Ready cascade (re-read siblings with the update applied) ---
-    cursor.execute("""
-        SELECT wo_step_id, sequence_number, status, qty_completed
-        FROM dbo.pc_wo_routing_steps
-        WHERE work_order_id = %s
-        ORDER BY sequence_number, wo_step_id
-    """, (work_order_id,))
-    siblings = cursor.fetchall()
-    for s in siblings:
-      if s['status'] != STATUS_PENDING:
-        continue
-      preds = [p for p in siblings
-               if p['sequence_number'] < s['sequence_number']]
-      if all(p['status'] == STATUS_SKIPPED or p['qty_completed'] > 0
-             for p in preds):
-        cursor.execute("""
-            UPDATE dbo.pc_wo_routing_steps
-            SET status = %s WHERE wo_step_id = %s
-        """, (STATUS_READY, s['wo_step_id']))
-        cursor.execute("""
-            INSERT INTO dbo.pc_wo_routing_step_events
-                (wo_step_id, work_order_id, event_type, event_by, notes)
-            VALUES (%s, %s, 'Ready', %s, 'auto: predecessor progress')
-        """, (s['wo_step_id'], work_order_id, actor))
 
     # --- WO-complete signal ---
     cursor.execute("""
