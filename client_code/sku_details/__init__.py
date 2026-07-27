@@ -3,6 +3,14 @@ from anvil import *
 import anvil.server
 
 
+def _ask_yes_no(text, title=''):
+  """Yes/No question dialog. Anvil's confirm() renders OK/Cancel buttons
+  in this runtime - questions read better as Yes/No (Dave, 2026-07-27).
+  Dismissing the dialog (Esc / click-away) counts as No."""
+  return alert(text, title=title,
+               buttons=[('Yes', True), ('No', False)]) is True
+
+
 class sku_details(sku_detailsTemplate):
   """
     SKU Details / Routing Library (Routing v2) — the app's centerpiece.
@@ -90,9 +98,14 @@ class sku_details(sku_detailsTemplate):
     wo = self._wo
 
     due = wo.get('wo_due_date') or wo.get('due_date') or 'n/a'
+    # Line number helps the user keep their place while stepping through
+    # a packet's separate work orders (Dave, 2026-07-27).
+    line = wo.get('sales_order_line')
+    line_txt = f"Line {line}  |  " if line is not None else ''
     self.lbl_wo_banner.text = (
       f"Routing for {wo.get('work_order_number', '')}  |  "
       f"SO {wo.get('sales_order_number', '')}-{wo.get('sales_order_rel', '')}  |  "
+      f"{line_txt}"
       f"Qty {wo.get('effective_qty', '')}  |  Due {due}")
     self.lbl_wo_banner.background = '#E3F2FD'   # pale sky blue
     self.lbl_wo_banner.visible = True
@@ -345,9 +358,9 @@ class sku_details(sku_detailsTemplate):
     if matches:
       m = matches[0]
       wo_attrib = self._wo.get('attribute_value') or ''
-      if confirm(f"This order's configuration ({wo_attrib}) exactly "
-                 f"matches PC special {m['sku']} — {m['part_desc']}.\n\n"
-                 f"Load its routing?"):
+      if _ask_yes_no(f"This order's configuration ({wo_attrib}) exactly "
+                     f"matches PC special {m['sku']} — {m['part_desc']}.\n\n"
+                     f"Load its routing?"):
         tpl = anvil.server.call('get_template_for_sku', m['sku'])
         if tpl.get('steps'):
           self._steps = self._steps_from_rows(tpl['steps'])
@@ -390,8 +403,8 @@ class sku_details(sku_detailsTemplate):
     for s in self._steps:
       key = (s['seq'], s['department_id'])
       if key in seen:
-        if not confirm("The same department appears twice in one parallel "
-                       "group. That's allowed — save anyway?"):
+        if not _ask_yes_no("The same department appears twice in one parallel "
+                           "group. That's allowed — save anyway?"):
           return None
         break
       seen.add(key)
@@ -434,8 +447,8 @@ class sku_details(sku_detailsTemplate):
     # play (banks the knowledge under the SPECIAL), else the WO's part.
     tpl_sku = self._template_target or self._wo['part_number']
     if saved.get('template_differs') or self._template_target:
-      if confirm(f"Save this routing as the default for {tpl_sku}?\n\n"
-                 f"Answer No for a one-off deviation on this order only."):
+      if _ask_yes_no(f"Save this routing as the default for {tpl_sku}?\n\n"
+                     f"Answer No for a one-off deviation on this order only."):
         tpl = anvil.server.call('save_routing_template', tpl_sku, payload)
         if tpl.get('status') != 'success':
           alert(f"Routing saved, but the default was not: "
@@ -453,18 +466,18 @@ class sku_details(sku_detailsTemplate):
     remaining_same = [w for w in self._wo_queue
                       if w.get('part_number') == part]
     if remaining_same and part not in self._part_routings:
-      if confirm(f"Apply this same routing to the remaining "
-                 f"{len(remaining_same)} work order(s) for part {part} "
-                 f"in this packet?"):
+      if _ask_yes_no(f"Apply this same routing to the remaining "
+                     f"{len(remaining_same)} work order(s) for part {part} "
+                     f"in this packet?"):
         self._part_routings[part] = payload
     self._advance_queue()
 
   def _cancel_wo_click(self, **event_args):
     wo_num = self._wo.get('work_order_number', '') if self._wo else ''
     if self._wo_queue:
-      c = confirm(f"{wo_num} was not released.\n\nSkip it and continue "
-                  f"with the rest of the packet?  (Cancel stops the whole "
-                  f"packet release.)")
+      c = _ask_yes_no(f"{wo_num} was not released.\n\nSkip it and continue "
+                      f"with the rest of the packet?  (Cancel stops the whole "
+                      f"packet release.)")
       if c:
         self._advance_queue()
         return
