@@ -133,7 +133,7 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
 
     if status == 'Released':
       if not confirm(
-        f"Un-release WO {wo_num} back to 'Created'?\n\n"
+        f"Un-release {wo_num} back to 'Created'?\n\n"
         "It will be removed from the SE Department board until it is "
         "released again. Its routing is kept and will pre-load at the "
         "next release."
@@ -142,7 +142,7 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
       result = anvil.server.call('unrelease_work_order',
                                  self._item['work_order_id'])
       if result['status'] == 'success':
-        Notification(f"WO {wo_num} un-released (back to Created)").show()
+        Notification(f"{wo_num} un-released (back to Created)").show()
         self.raise_event('x-close')
       else:
         alert(f"Error: {result.get('message', 'Unknown error')}")
@@ -165,11 +165,11 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
     status = self._item.get('status', '')
     wo_num = self._item.get('work_order_number', '')
     if status in ('In Progress', 'Paused'):
-      msg = (f"WO {wo_num} is currently {status} on the floor.\n\n"
+      msg = (f"{wo_num} is currently {status} on the floor.\n\n"
              "Cancelling will remove it from the SE Department board "
              "immediately. Continue?")
     else:
-      msg = f"Cancel WO {wo_num}? This cannot be undone."
+      msg = f"Cancel {wo_num}? This cannot be undone."
     if not confirm(msg):
       return
     result = anvil.server.call(
@@ -178,7 +178,7 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
       'Cancelled'
     )
     if result['status'] == 'success':
-      Notification(f"WO {wo_num} cancelled").show()
+      Notification(f"{wo_num} cancelled").show()
       self.raise_event('x-close')
     else:
       alert(f"Error: {result.get('message', 'Unknown error')}")

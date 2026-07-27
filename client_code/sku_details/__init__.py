@@ -91,7 +91,7 @@ class sku_details(sku_detailsTemplate):
 
     due = wo.get('wo_due_date') or wo.get('due_date') or 'n/a'
     self.lbl_wo_banner.text = (
-      f"Routing for WO {wo.get('work_order_number', '')}  |  "
+      f"Routing for {wo.get('work_order_number', '')}  |  "
       f"SO {wo.get('sales_order_number', '')}-{wo.get('sales_order_rel', '')}  |  "
       f"Qty {wo.get('effective_qty', '')}  |  Due {due}")
     self.lbl_wo_banner.background = '#E3F2FD'   # pale sky blue
@@ -446,7 +446,7 @@ class sku_details(sku_detailsTemplate):
       alert(f"Routing saved but release failed: "
             f"{rel.get('message', 'Unknown error')}")
       return
-    Notification(f"WO {wo_num} released to the floor").show()
+    Notification(f"{wo_num} released to the floor").show()
 
     # Packet shortcut: offer reuse for remaining same-part WOs
     part = self._wo['part_number']
@@ -462,7 +462,7 @@ class sku_details(sku_detailsTemplate):
   def _cancel_wo_click(self, **event_args):
     wo_num = self._wo.get('work_order_number', '') if self._wo else ''
     if self._wo_queue:
-      c = confirm(f"WO {wo_num} was not released.\n\nSkip it and continue "
+      c = confirm(f"{wo_num} was not released.\n\nSkip it and continue "
                   f"with the rest of the packet?  (Cancel stops the whole "
                   f"packet release.)")
       if c:
@@ -483,10 +483,10 @@ class sku_details(sku_detailsTemplate):
           rel = anvil.server.call('update_work_order_status',
                                   nxt['work_order_id'], 'Released')
           if rel.get('status') == 'success':
-            Notification(f"WO {nxt.get('work_order_number', '')} released "
+            Notification(f"{nxt.get('work_order_number', '')} released "
                          f"(routing reused)").show()
             continue
-        alert(f"WO {nxt.get('work_order_number', '')}: "
+        alert(f"{nxt.get('work_order_number', '')}: "
               f"{saved.get('message', 'could not reuse routing')} — "
               f"opening the editor.")
       self._enter_wo_mode(nxt['work_order_id'])
