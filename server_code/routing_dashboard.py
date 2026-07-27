@@ -317,7 +317,8 @@ def save_wo_routing(work_order_id, steps, actor=None):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT work_order_id, part_number, quantity, wo_override_qty
+        SELECT work_order_id, work_order_number, part_number, quantity,
+               wo_override_qty
         FROM dbo.work_orders WHERE work_order_id = %s
     """, (work_order_id,))
     wo = cursor.fetchone()
@@ -378,6 +379,20 @@ def save_wo_routing(work_order_id, steps, actor=None):
                 (wo_step_id, work_order_id, event_type, event_by, notes)
             VALUES (%s, %s, 'Ready', %s, 'first step at release')
         """, (wo_step_id, work_order_id, actor))
+        # ONE notification rule (007): Pending->Ready => text that
+        # department. sp_pc_complete_step only covers handoff cascades,
+        # so the RELEASE-time queue insert lives here. (Gap found in the
+        # 2026-07-27 WO-2026-0201 test: routing saved, no text queued.)
+        cursor.execute("""
+            INSERT INTO dbo.pc_notifications
+                (work_order_id, wo_step_id, notify_type, department_id, message)
+            SELECT %s, %s, 'Dept_Step_Ready', d.department_id,
+                   CONCAT('WO ', %s, ' (', %s, ') is ready for ',
+                          d.department_name, '. Released by Production Control.')
+            FROM dbo.pc_departments d
+            WHERE d.department_id = %s
+        """, (work_order_id, wo_step_id, wo['work_order_number'],
+              wo['part_number'], s['department_id']))
 
     # Does the saved routing differ from the active default template?
     cursor.execute("""
@@ -691,6 +706,8 @@ def reset_steps_for_rework(work_order_id, from_sequence, actor=None):
     cursor.execute("""
         SELECT wo_step_id, sequence_number, status
         FROM dbo.pc_wo_routing_steps
+        WHERE work_order_id = %s
+          AND sequence_number >= %s
           AND status <> %s
         ORDER BY sequence_number, wo_step_id
     """, (work_order_id, from_sequence, STATUS_SKIPPED))
@@ -712,6 +729,24 @@ def reset_steps_for_rework(work_order_id, from_sequence, actor=None):
           VALUES (%s, %s, 'Reset', %s, %s)
       """, (t['wo_step_id'], work_order_id, actor,
             f'rework re-entry at sequence {reentry_seq}'))
+
+    # Same ONE rule as release/handoff: the re-entry department is texted
+    # (the Integration Contract promises SE an automatic re-text).
+    cursor.execute("""
+        INSERT INTO dbo.pc_notifications
+            (work_order_id, wo_step_id, notify_type, department_id, message)
+        SELECT s.work_order_id, s.wo_step_id, 'Dept_Step_Ready',
+               s.department_id,
+               CONCAT('WO ', w.work_order_number, ' (', w.part_number,
+                      ') is ready for ', d.department_name,
+                      '. Rework re-entry by ', %s, '.')
+        FROM dbo.pc_wo_routing_steps s
+        JOIN dbo.work_orders w ON w.work_order_id = s.work_order_id
+        JOIN dbo.pc_departments d ON d.department_id = s.department_id
+        WHERE s.work_order_id = %s
+          AND s.sequence_number = %s
+          AND s.status = 'Ready'
+    """, (actor, work_order_id, reentry_seq))
 
     conn.commit()
     return {'status': 'success', 'reset_count': len(targets)}
