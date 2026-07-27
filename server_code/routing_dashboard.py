@@ -387,8 +387,8 @@ def save_wo_routing(work_order_id, steps, actor=None):
             INSERT INTO dbo.pc_notifications
                 (work_order_id, wo_step_id, notify_type, department_id, message)
             SELECT %s, %s, 'Dept_Step_Ready', d.department_id,
-                   CONCAT('WO ', %s, ' (', %s, ') is ready for ',
-                          d.department_name, '. Released by Production Control.')
+                   CONCAT(%s, ' (', %s, ') is ready for ', d.department_name,
+                          '. Released by Production Control.')
             FROM dbo.pc_departments d
             WHERE d.department_id = %s
         """, (work_order_id, wo_step_id, wo['work_order_number'],
@@ -737,7 +737,7 @@ def reset_steps_for_rework(work_order_id, from_sequence, actor=None):
             (work_order_id, wo_step_id, notify_type, department_id, message)
         SELECT s.work_order_id, s.wo_step_id, 'Dept_Step_Ready',
                s.department_id,
-               CONCAT('WO ', w.work_order_number, ' (', w.part_number,
+               CONCAT(w.work_order_number, ' (', w.part_number,
                       ') is ready for ', d.department_name,
                       '. Rework re-entry by ', %s, '.')
         FROM dbo.pc_wo_routing_steps s
