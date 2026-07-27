@@ -269,3 +269,8 @@ class work_orders(work_ordersTemplate):
     finally:
       self.btn_ack_orphans.enabled = True
       self.btn_ack_orphans.text = "Accept Orphans"
+
+  @handle("btn_sms_test", "click")
+  def btn_sms_test_click(self, **event_args):
+    """This method is called when the button is clicked"""
+    anvil.server.call('send_routing_notifications_now')

@@ -38,6 +38,10 @@ components:
       name: lbl_last_refreshed
       properties: {align: left, font_size: 10, foreground: '#888888', icon: 'fa:refresh', italic: true, text: 'Last Refreshed: -- '}
       type: Label
+    - layout_properties: {}
+      name: btn_sms_test
+      properties: {role: elevated-button, text: SMS Test}
+      type: Button
     layout_properties: {full_width_row: true, grid_position: 'OISICE,JEPZLC'}
     name: flow_buttons
     properties:
