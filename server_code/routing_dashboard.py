@@ -730,6 +730,15 @@ def reset_steps_for_rework(work_order_id, from_sequence, actor=None):
       """, (t['wo_step_id'], work_order_id, actor,
             f'rework re-entry at sequence {reentry_seq}'))
 
+    # Re-triage (matches the June Reopen decision): rework clears the
+    # WO-level operator so the card lands UNOWNED in the released pool -
+    # the supervisor re-assigns, work never jumps straight back into an
+    # operator's queue. (PC owns work_orders, so this write is ours.)
+    cursor.execute("""
+        UPDATE dbo.work_orders SET assigned_operator = NULL
+        WHERE work_order_id = %s
+    """, (work_order_id,))
+
     # Same ONE rule as release/handoff: the re-entry department is texted
     # (the Integration Contract promises SE an automatic re-text).
     cursor.execute("""
