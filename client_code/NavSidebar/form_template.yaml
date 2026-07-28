@@ -1,7 +1,7 @@
 components:
 - layout_properties: {grid_position: 'NXREXV,AVITOC'}
   name: lbl_starlite
-  properties: {bold: true, text: Starlite Facility, underline: true}
+  properties: {bold: true, text: Production Control v2.0, underline: true}
   type: Label
 - event_bindings: {}
   layout_properties: {grid_position: 'ECWAQI,WHSFBF'}
