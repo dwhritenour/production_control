@@ -28,6 +28,7 @@ class NavSidebar(NavSidebarTemplate):
   # so the browser handles it and our user keeps their place here.
   _EXTERNAL_TARGETS = {
     'btn_change_log': 'https://titan-change-log.anvil.app/',
+    'btn_titan_ai': 'https://titan-ai.anvil.app/',
   }
 
   def __init__(self, active=None, **properties):
@@ -79,8 +80,3 @@ class NavSidebar(NavSidebarTemplate):
   def active(self, value):
     self._active = value
     self._highlight_active()
-
-  @handle("btn_change_log", "click")
-  def btn_change_log_click(self, **event_args):
-    """This method is called when the button is clicked"""
-    pass  # Write Code Here

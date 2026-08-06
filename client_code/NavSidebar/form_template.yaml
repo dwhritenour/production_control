@@ -57,7 +57,7 @@ components:
     text: Part Master
   type: Button
 - event_bindings: {}
-  layout_properties: {grid_position: 'XVROFK,DNLHRC'}
+  layout_properties: {grid_position: 'PTGFNG,TIJSHV'}
   name: btn_change_log
   properties:
     enabled: true
@@ -66,6 +66,18 @@ components:
     spacing:
       padding: [null, '36', null, '36']
     text: Change Log
+  type: Button
+- event_bindings: {}
+  layout_properties: {grid_position: 'YFZDKB,NVGTYI'}
+  name: btn_titan_ai
+  properties:
+    background: ''
+    enabled: true
+    icon: fa:magic
+    role: elevated-button
+    spacing:
+      padding: [null, '40', null, '40']
+    text: '✦ Titan AI '
   type: Button
 container: {type: ColumnPanel}
 custom_component: true
