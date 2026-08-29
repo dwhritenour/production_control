@@ -275,13 +275,13 @@ components:
 - layout_properties: {slot: title}
   name: lbl_title
   properties:
-    bold: false
+    bold: true
     font_size: null
     role: title
     spacing:
       margin: ['5', null, null, null]
       padding: ['8', null, null, null]
-    text: Work Orders - Straining Element Department
+    text: Production Control v2.0
   type: Label
 - layout_properties: {slot: left-nav}
   name: nav
