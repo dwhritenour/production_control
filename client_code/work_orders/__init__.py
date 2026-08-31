@@ -22,6 +22,11 @@ class work_orders(work_ordersTemplate):
     if search_text:
       self.tb_search.text = search_text
 
+    # Volume guard (2026-08-31): default the status filter to 'Created' so
+    # the initial load stays well under the payload size that broke after
+    # the all-WO expansion (Dave's pick over an Active-only default).
+    self.dd_status_filter.selected_value = 'Created'
+
     # Load initial data
     self.refresh_data()
 
@@ -61,6 +66,8 @@ class work_orders(work_ordersTemplate):
       count = len(result['work_orders'])
       total_qty = sum(wo.get('quantity', 0) or 0 for wo in result['work_orders'])
       self.lbl_record_count.text = f"{count} work orders  |  {total_qty:,} straining elements"
+      if result.get('truncated'):
+        self.lbl_record_count.text += f"  (showing first {count:,} - refine filters)"
 
       # Update summary cards
       counts = result['counts']
@@ -178,7 +185,7 @@ class work_orders(work_ordersTemplate):
     self.refresh_data()
     Notification("Refreshed").show()
 
-  
+
 
   @handle("btn_scan", "click")
   def btn_scan_click(self, **event_args):
@@ -243,7 +250,7 @@ class work_orders(work_ordersTemplate):
     """Backorders-only filter toggled — reload data."""
     self.refresh_data()
 
- 
+
   @handle("btn_ack_orphans", "click")
   def btn_ack_orphans_click(self, **event_args):
     """Bulk acknowledge all orphaned Verify-status work orders."""

@@ -175,7 +175,7 @@ components:
       - {data_key: '', expand: true, id: BDHJXT, title: Notes, width: '350'}
       margin: [null, '0', null, '0']
       role: [horizontal-scroll, tonal-data-grid]
-      rows_per_page: 10
+      rows_per_page: 15
     type: DataGrid
   - components:
     - layout_properties: {grid_position: 'MUAXYE,SSYNUW'}

@@ -69,7 +69,7 @@ def get_connection():
 # =============================================================================
 
 @anvil.server.callable
-def get_work_orders(status_filter=None, search_text=None, active_only=False, backorder_only=False, statuses=None, show_rush_only=False):
+def get_work_orders(status_filter=None, search_text=None, active_only=False, backorder_only=False, statuses=None, show_rush_only=False, limit=4000):
   """
     Fetch work orders with optional filtering.
 
@@ -98,8 +98,14 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
     # Main query: work orders joined to sales_orders_due for context
     # -----------------------------------------------------------------
     rush_case = _sod._rush_case_sql('so.')
+    # Volume guard (2026-08-31): the all-WO expansion (migration 037) grew
+    # work_orders past what one Anvil server-call return can carry. Cap the
+    # rows shipped to the client; TOP(limit+1) lets us detect truncation.
+    top_clause = ''
+    if limit:
+      top_clause = f'TOP ({int(limit) + 1}) '
     query = f"""
-        SELECT
+        SELECT {top_clause}
             wo.work_order_id,
             wo.work_order_number,
             wo.sales_order_number,
@@ -195,6 +201,11 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
     cursor.execute(query, params)
     rows = cursor.fetchall()
 
+    # Volume guard: detect and trim past-cap results
+    truncated = bool(limit) and len(rows) > int(limit)
+    if truncated:
+      rows = rows[:int(limit)]
+
     # Serialize and split attribute values for grid display
     work_orders = []
     for row in rows:
@@ -288,7 +299,8 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
     return {
       'status': 'success',
       'work_orders': work_orders,
-      'counts': counts
+      'counts': counts,
+      'truncated': truncated
     }
 
   except Exception as e:
