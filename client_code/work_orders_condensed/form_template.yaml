@@ -243,7 +243,7 @@ components:
         properties: {font_size: 12, foreground: '#888888', italic: true}
         type: Link
       layout_properties: {grid_position: 'PSRWAZ,SFXLXD'}
-      name: flow_panel_1
+      name: fp_footer
       properties:
         align: right
         border: ''
@@ -251,7 +251,7 @@ components:
           margin: ['0', null, '0', null]
       type: FlowPanel
     layout_properties: {grid_position: 'RKOMHF,BSIIHU'}
-    name: outlined_card_4
+    name: oc_footer
     properties:
       border: '1px solid #E7E0EC'
       role: outlined-card
