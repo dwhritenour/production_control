@@ -229,7 +229,10 @@ class work_orders_condensed(work_orders_condensedTemplate):
     data_key already exists (e.g. one you added in the designer)."""
     try:
       cols = list(self.grid_active.columns or [])
-      if any((c.get('data_key') == 'plan_label') for c in cols):
+      # Dave built a 'Plan' column in the designer (2026-09-08) with lbl_plan
+      # in it - never add a second one. Match on title OR data_key.
+      if any((c.get('data_key') == 'plan_label'
+              or (c.get('title') or '').strip().lower() == 'plan') for c in cols):
         return
       cols.insert(1, {'id': 'PLAN056', 'title': 'Plan',
                       'data_key': 'plan_label', 'width': '70'})

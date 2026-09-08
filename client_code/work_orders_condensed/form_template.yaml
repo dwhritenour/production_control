@@ -209,14 +209,16 @@ components:
   - components:
     - layout_properties: {}
       name: repeating_panel_1
-      properties: {item_template: work_orders_condensed.CondensedRowTemplate}
+      properties:
+        item_template: work_orders_condensed.CondensedRowTemplate
+        margin: ['0', null, '4', null]
       type: RepeatingPanel
     data_bindings: []
     layout_properties: {full_width_row: false, grid_position: 'TRVFKH,LFNVUC'}
     name: grid_active
     properties:
       columns:
-      - {data_key: '', expand: false, id: JKSDUP, title: WO#, width: '120'}
+      - {data_key: '', expand: false, id: JKSDUP, title: WO#, width: '160'}
       - {data_key: column_1, id: FFJJRW, title: Plan, width: '100'}
       - {data_key: '', expand: false, id: VJQQOR, title: Status, width: '190'}
       - {data_key: '', id: OJLQEN, title: SO#, width: '105'}
