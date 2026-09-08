@@ -147,6 +147,17 @@ components:
             padding: ['3', '4', null, '4']
           text: 'Rush: 0'
         type: Link
+      - layout_properties: {}
+        name: lk_plan_count
+        properties:
+          bold: true
+          border: '1px solid #2cb0eb'
+          font_size: 12
+          foreground: '#2cb0eb'
+          spacing:
+            padding: ['3', '4', null, '4']
+          text: 'Plan: 0'
+        type: Link
       - components: []
         layout_properties: {}
         name: lbl_paused_count
@@ -206,6 +217,7 @@ components:
     properties:
       columns:
       - {data_key: '', expand: false, id: JKSDUP, title: WO#, width: '120'}
+      - {data_key: column_1, id: FFJJRW, title: Plan, width: '100'}
       - {data_key: '', expand: false, id: VJQQOR, title: Status, width: '190'}
       - {data_key: '', id: OJLQEN, title: SO#, width: '105'}
       - {data_key: '', id: NTNWAU, title: Part Number / Straining Element, width: '180'}

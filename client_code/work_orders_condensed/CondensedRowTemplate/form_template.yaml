@@ -77,5 +77,11 @@ components:
       margin: ['12', null, '0', null]
       padding: ['0', null, '0', null]
   type: Label
-container: {type: DataRowPanel}
+- layout_properties: {column: FFJJRW}
+  name: lbl_plan
+  properties: {font_size: 12}
+  type: Link
+container:
+  properties: {font_size: 12}
+  type: DataRowPanel
 is_package: true

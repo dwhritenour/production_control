@@ -124,6 +124,23 @@ class CondensedRowTemplate(CondensedRowTemplateTemplate):
       self.lbl_plan.bold = bool(self.item.get('on_todays_plan'))
       self.lbl_plan.foreground = {'Must': '#C62828', 'Next': '#EF6C00',
                                   'Stretch': '#78909C'}.get(tier, '#455A64')
+    # Row cue (Dave, 2026-09-08): a work order on TODAY'S plan is unmistakable
+    # at a glance - green-tinted row, WO# in plan green with a marker. A stamp
+    # from an OLDER day (planned, never moved, not on today's plan) gets a
+    # pale amber row so it is not mistaken for today's work.
+    try:
+      if self.item.get('on_todays_plan'):
+        self.background = '#E8F5E9'
+        self.link_wo_number.text = '▶ ' + (self.item.get('work_order_number') or '')
+        self.link_wo_number.foreground = '#1B5E20'
+        self.link_wo_number.tooltip = f"On today's plan: {self.item.get('plan_label') or ''}"
+      elif self.item.get('plan_date'):
+        self.background = '#FFF8E1'
+        self.link_wo_number.tooltip = f"Planned {self.item.get('plan_label') or ''} - not on today's plan"
+      else:
+        self.background = ''
+    except Exception:
+      pass
 
   # =========================================================================
   # POPUPS  (reuse the existing WorkOrderDetail / detail forms)
