@@ -124,6 +124,13 @@ class CondensedRowTemplate(CondensedRowTemplateTemplate):
       self.lbl_plan.bold = bool(self.item.get('on_todays_plan'))
       self.lbl_plan.foreground = {'Must': '#C62828', 'Next': '#EF6C00',
                                   'Stretch': '#78909C'}.get(tier, '#455A64')
+      # lbl_plan is a Link in the designer: clicking a plan cell opens the
+      # Daily Plan app in a new tab (Dave, 2026-09-08 - 'the link is dead').
+      # Cells with no stamp stay inert.
+      if self.item.get('plan_label'):
+        self.lbl_plan.tooltip = (f"{'Today' if self.item.get('on_todays_plan') else 'Planned'}"
+                                 f" {self.item.get('plan_label')} - open the Daily Plan")
+        self.lbl_plan.set_event_handler('click', self._open_daily_plan)
     # Row cue (Dave, 2026-09-08): a work order on TODAY'S plan is unmistakable
     # at a glance - green-tinted row, WO# in plan green with a marker. A stamp
     # from an OLDER day (planned, never moved, not on today's plan) gets a
@@ -141,6 +148,16 @@ class CondensedRowTemplate(CondensedRowTemplateTemplate):
         self.background = ''
     except Exception:
       pass
+
+  DAILY_PLAN_URL = 'https://titan-plan.anvil.app'
+
+  def _open_daily_plan(self, **event_args):
+    """Open the Titan Daily Plan app in a new browser tab."""
+    try:
+      import anvil.js
+      anvil.js.window.open(self.DAILY_PLAN_URL, '_blank')
+    except Exception:
+      pass                     # nothing sensible to do in-app; stay put
 
   # =========================================================================
   # POPUPS  (reuse the existing WorkOrderDetail / detail forms)
