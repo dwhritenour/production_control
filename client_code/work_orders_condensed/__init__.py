@@ -14,7 +14,11 @@ ROWS_PER_PAGE = 15
 # Rush summary-card accent (matches sales_orders_due RUSH_CARD_COLOR).
 RUSH_CARD_COLOR = '#E65100'
 
+# Daily Plan chip accent (056): today's published plan, released / total.
+PLAN_CARD_COLOR = '#1B5E20'
+
 SORT_MAP = {
+  'Plan (position)': 'plan_sort',
   'Due Date (Earliest)': 'wo_due_date',
   'SO Due Date (Earliest)': 'due_date',
   'SO# (Ascending)': 'sales_order_number',
@@ -46,6 +50,9 @@ class work_orders_condensed(work_orders_condensedTemplate):
     self._wire_count_filters()
     self._rush_only = False
     self._wire_rush_filter()
+    self._plan_only = False
+    self._wire_plan_filter()
+    self._add_plan_column()
     self._page = 0
     self._wire_pager()
     try:
@@ -78,6 +85,9 @@ class work_orders_condensed(work_orders_condensedTemplate):
       return
 
     self._work_orders = result['work_orders']
+    if self._plan_only:
+      # 056: only today's published plan (server already sorted it first)
+      self._work_orders = [w for w in self._work_orders if w.get('on_todays_plan')]
     self._apply_sort()
     self._page = 0
     self._render_page()
@@ -97,6 +107,10 @@ class work_orders_condensed(work_orders_condensedTemplate):
     if hasattr(self, 'lk_rush_count'):
       self.lk_rush_count.text = f"Rush: {counts.get('rush', 0)}"
     self._style_rush_link()
+    if hasattr(self, 'lk_plan_count'):
+      self.lk_plan_count.text = (f"Plan: {counts.get('plan_released', 0)}/"
+                                 f"{counts.get('plan_today', 0)} released")
+    self._style_plan_link()
     self._style_count_links()
     self.lbl_record_count.text = f"{len(self._work_orders)} active work orders"
 
@@ -206,6 +220,53 @@ class work_orders_condensed(work_orders_condensedTemplate):
       pass
 
   # =========================================================================
+  # DAILY PLAN  (056: 'Plan' column + chip; click the chip for plan-only)
+  # =========================================================================
+  def _add_plan_column(self):
+    """Insert a 'Plan' column right after WO# without touching the designer:
+    a DataGrid column with a data_key and no placed component renders
+    item['plan_label'] ('M-3') on its own. Skipped if a column with that
+    data_key already exists (e.g. one you added in the designer)."""
+    try:
+      cols = list(self.grid_active.columns or [])
+      if any((c.get('data_key') == 'plan_label') for c in cols):
+        return
+      cols.insert(1, {'id': 'PLAN056', 'title': 'Plan',
+                      'data_key': 'plan_label', 'width': '70'})
+      self.grid_active.columns = cols
+    except Exception:
+      pass
+
+  def _wire_plan_filter(self):
+    if not hasattr(self, 'lk_plan_count'):
+      return
+    try:
+      self.lk_plan_count.set_event_handler('click', self._toggle_plan)
+    except Exception:
+      pass
+    self._style_plan_link()
+
+  def _toggle_plan(self, **event_args):
+    self._plan_only = not self._plan_only
+    self.refresh_data()
+
+  def _style_plan_link(self):
+    if not hasattr(self, 'lk_plan_count'):
+      return
+    comp = self.lk_plan_count
+    try:
+      comp.bold = True
+      comp.border = f'1px solid {PLAN_CARD_COLOR}'
+      if self._plan_only:
+        comp.background = PLAN_CARD_COLOR
+        comp.foreground = '#FFFFFF'
+      else:
+        comp.background = ''
+        comp.foreground = PLAN_CARD_COLOR
+    except Exception:
+      pass
+
+  # =========================================================================
   # CUSTOM PAGINATION  ("Showing X to Y of N entries")
   # =========================================================================
   def _wire_pager(self):
@@ -272,6 +333,11 @@ class work_orders_condensed(work_orders_condensedTemplate):
         return None
 
     def sort_val(row):
+      if key == 'plan_sort':
+        # today's plan first in plan order; everything else after, by WO#
+        on_plan = bool(row.get('on_todays_plan'))
+        return (not on_plan, row.get('plan_position') or 10 ** 9,
+                row.get('work_order_number') or '')
       val = row.get(key)
       if key in ('wo_due_date', 'due_date'):
         return (parse_mdY(val) is None, parse_mdY(val) or (9999, 12, 31))

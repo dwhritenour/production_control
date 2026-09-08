@@ -114,6 +114,17 @@ class CondensedRowTemplate(CondensedRowTemplateTemplate):
     override = self.item.get('wo_override_qty')
     self.tb_override_qty.text = str(int(override)) if override is not None else ''
 
+    # ---- Daily Plan stamp (056) ---------------------------------------------
+    # The 'Plan' column is code-added in the parent (auto cell shows
+    # plan_label). If you later drop a Label named lbl_plan into that column,
+    # it takes over with tier colouring: Must red, Next amber, Stretch grey.
+    if hasattr(self, 'lbl_plan'):
+      self.lbl_plan.text = self.item.get('plan_label') or ''
+      tier = (self.item.get('plan_tier') or '')
+      self.lbl_plan.bold = bool(self.item.get('on_todays_plan'))
+      self.lbl_plan.foreground = {'Must': '#C62828', 'Next': '#EF6C00',
+                                  'Stretch': '#78909C'}.get(tier, '#455A64')
+
   # =========================================================================
   # POPUPS  (reuse the existing WorkOrderDetail / detail forms)
   # =========================================================================

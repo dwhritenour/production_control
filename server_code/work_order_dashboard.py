@@ -65,6 +65,41 @@ def get_connection():
 
 
 # =============================================================================
+# DAILY PLAN STAMP (migration 056, 2026-09-08)
+# =============================================================================
+# The published Daily Plan is carried on work_orders.plan_date / plan_tier /
+# plan_position (stamped by the Daily Plan app on publish + revision, and by
+# scan_and_create_work_orders for WOs born after publish). Today's plan sorts
+# FIRST, in plan order, so releasing the plan is a top-to-bottom pass.
+
+_WO_TERMINAL = ('Complete', 'Cancelled', 'Closed - Verify',
+                'Shipped - Verify', 'Invoiced - Verify')
+
+
+def _has_plan_columns(cursor):
+  """True once 056 is applied. Lets this module be pasted before the
+  migration runs without breaking the grid."""
+  cursor.execute("SELECT COL_LENGTH('dbo.work_orders', 'plan_date') AS c")
+  row = cursor.fetchone()
+  return bool(row and row.get('c') is not None)
+
+
+def _plan_label(tier, position, plan_date_str, on_today):
+  """'M-3' for today's plan; 'M-3 (09/08)' when the stamp is an older day
+  (the line was planned, never moved, and is not on today's plan)."""
+  if not tier or position is None:
+    return ''
+  label = f"{str(tier)[0].upper()}-{int(position)}"
+  if not on_today and plan_date_str:
+    try:
+      from datetime import datetime as dt
+      label += f" ({dt.fromisoformat(plan_date_str).strftime('%m/%d')})"
+    except (ValueError, TypeError):
+      pass
+  return label
+
+
+# =============================================================================
 # GET WORK ORDERS
 # =============================================================================
 
@@ -104,9 +139,18 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
     top_clause = ''
     if limit:
       top_clause = f'TOP ({int(limit) + 1}) '
+    has_plan = _has_plan_columns(cursor)
+    if has_plan:
+      plan_cols = ("\n            wo.plan_date, wo.plan_tier, wo.plan_position,"
+                   "\n            CASE WHEN wo.plan_date = CAST(GETDATE() AS DATE)"
+                   " THEN 1 ELSE 0 END AS on_todays_plan,")
+    else:
+      plan_cols = ("\n            CAST(NULL AS DATE) AS plan_date,"
+                   " CAST(NULL AS VARCHAR(8)) AS plan_tier,"
+                   "\n            CAST(NULL AS INT) AS plan_position, 0 AS on_todays_plan,")
     query = f"""
         SELECT {top_clause}
-            wo.work_order_id,
+            wo.work_order_id,{plan_cols}
             wo.work_order_number,
             wo.sales_order_number,
             wo.sales_order_rel,
@@ -184,8 +228,17 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
     # Sort: live/floor statuses first, then office backlog, then terminal.
     # Within each group, sort by due date ascending (earliest first).
     # SE Department rollout (2026-06-17): Released/Assigned/Paused added.
-    query += """
+    # 056: today's published plan first, in plan order; everything else keeps
+    # the status-group / due-date order below it.
+    if has_plan:
+      query += """
         ORDER BY
+            CASE WHEN wo.plan_date = CAST(GETDATE() AS DATE) THEN 0 ELSE 1 END,
+            ISNULL(wo.plan_position, 2147483647),"""
+    else:
+      query += """
+        ORDER BY"""
+    query += """
             CASE wo.status
                 WHEN 'In Progress' THEN 1
                 WHEN 'Paused'      THEN 2
@@ -254,6 +307,13 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
       else:
         serialized['material_se'] = _mat or _se or ''
 
+      # Daily Plan stamp (056): 'M-3' / 'N-12' / 'S-2' (+ date when not today)
+      serialized['on_todays_plan'] = int(serialized.get('on_todays_plan') or 0)
+      serialized['plan_label'] = _plan_label(serialized.get('plan_tier'),
+                                             serialized.get('plan_position'),
+                                             serialized.get('plan_date'),
+                                             serialized['on_todays_plan'])
+
       # Carrier / MOS / rush flag (Carrier+MOS+Rush feature)
       serialized['nx_carrier'] = (serialized.get('nx_carrier') or '').strip()
       serialized['nx_mos']     = (serialized.get('nx_mos') or '').strip()
@@ -293,6 +353,23 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
     """)
     _rr = cursor.fetchone()
     counts['rush'] = _rr['cnt'] if _rr else 0
+
+    # 056: today's plan — how many work orders, how many already released
+    # (anything past 'Created'). Drives the 'Plan: 12/42 released' chip.
+    counts['plan_today'] = 0
+    counts['plan_released'] = 0
+    if has_plan:
+      cursor.execute(f"""
+          SELECT COUNT(*) AS cnt,
+                 SUM(CASE WHEN status <> 'Created' THEN 1 ELSE 0 END) AS released
+          FROM dbo.work_orders
+          WHERE plan_date = CAST(GETDATE() AS DATE)
+            AND status NOT IN ({", ".join(["%s"] * len(_WO_TERMINAL))})
+      """, _WO_TERMINAL)
+      _pr = cursor.fetchone()
+      if _pr:
+        counts['plan_today'] = _pr['cnt'] or 0
+        counts['plan_released'] = _pr['released'] or 0
 
     conn.close()
 

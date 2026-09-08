@@ -107,6 +107,19 @@ def scan_and_create_work_orders():
     row = cursor.fetchone()
     created = row['work_orders_created'] if row else 0
     conn.commit()
+
+    # 056 (2026-09-08): a work order born AFTER today's plan was published
+    # still gets the plan stamp. The procedure is a no-op when today's plan
+    # is not published, and is skipped entirely before 056 is applied.
+    if created > 0:
+      try:
+        cursor.execute("SELECT OBJECT_ID('dbo.sp_stamp_plan_work_orders') AS o")
+        if (cursor.fetchone() or {}).get('o') is not None:
+          cursor.execute("EXEC dbo.sp_stamp_plan_work_orders @plan_date = NULL")
+          cursor.fetchone()
+          conn.commit()
+      except Exception:
+        conn.rollback()          # stamping is best effort; creation stands
     conn.close()
 
     if created > 0:
