@@ -3,6 +3,20 @@ from anvil import *
 import anvil.server
 
 
+# Daily Plan (056, 2026-09-09): same treatment as work_orders_condensed.
+# Chip accent = plan green; the chip is the optional Link lk_plan_count.
+PLAN_CARD_COLOR = '#1B5E20'
+
+SORT_MAP = {
+  'Plan (position)': 'plan_sort',
+  'Due Date (Earliest)': 'due_date',
+  'SO# (Ascending)': 'sales_order_number',
+  'WO# (Ascending)': 'work_order_number',
+  'Part# (Ascending)': 'part_number',
+  'Created Date (Newest)': 'created_at',
+}
+
+
 class work_orders(work_ordersTemplate):
   def __init__(self, search_text=None, **properties):
     # Set Form properties and Data Bindings.
@@ -14,6 +28,16 @@ class work_orders(work_ordersTemplate):
     self._sort_key = None
     self._sort_reverse = False
     self._work_orders = []
+
+    # Daily Plan (056): 'Plan' column, chip, plan-only filter, sort option
+    self._plan_only = False
+    self._add_plan_column()
+    self._wire_plan_filter()
+    try:
+      if 'Plan (position)' not in (self.dd_sort.items or []):
+        self.dd_sort.items = ['Plan (position)'] + list(self.dd_sort.items or [])
+    except Exception:
+      pass
 
     # Hide the old inline detail panel (kept in YAML for rollback, hidden permanently)
     self.panel_detail.visible = False
@@ -56,6 +80,9 @@ class work_orders(work_ordersTemplate):
 
     if result['status'] == 'success':
       self._work_orders = result['work_orders']
+      if self._plan_only:
+        # 056: only today's published plan (server already sorted it first)
+        self._work_orders = [w for w in self._work_orders if w.get('on_todays_plan')]
 
       # Re-apply active sort if one is selected
       self._reapply_sort()
@@ -76,6 +103,10 @@ class work_orders(work_ordersTemplate):
       self.lbl_complete_count.text = f"Complete: {counts.get('Complete', 0)}"
 
       self.lbl_changes_count.text = f"Changes: {counts.get('PendingChanges', 0)}"
+      if hasattr(self, 'lk_plan_count'):
+        self.lk_plan_count.text = (f"Plan: {counts.get('plan_released', 0)}/"
+                                   f"{counts.get('plan_today', 0)} released")
+      self._style_plan_link()
 
       # Update last refreshed
       from datetime import datetime
@@ -94,7 +125,64 @@ class work_orders(work_ordersTemplate):
     self.tb_search.text = ''
     self.cb_active_only.checked = False
     self.cb_backorder_only.checked = False
+    self._plan_only = False
     self.refresh_data()
+
+  # =========================================================================
+  # DAILY PLAN  (056: 'Plan' column + chip; click the chip for plan-only)
+  # =========================================================================
+  def _add_plan_column(self):
+    """Insert a 'Plan' column right after WO# without touching the designer:
+    a DataGrid column with a data_key and no placed component renders
+    item['plan_label'] ('M-3') on its own. Skipped when a column titled
+    'Plan' (or keyed plan_label) already exists - e.g. one built in the
+    designer with lbl_plan in it, as on the condensed form."""
+    try:
+      cols = list(self.grid_work_orders.columns or [])
+      if any((c.get('data_key') == 'plan_label'
+              or (c.get('title') or '').strip().lower() == 'plan') for c in cols):
+        return
+      cols.insert(1, {'id': 'PLAN056', 'title': 'Plan',
+                      'data_key': 'plan_label', 'width': '90'})
+      self.grid_work_orders.columns = cols
+    except Exception:
+      pass
+
+  def _wire_plan_filter(self):
+    if not hasattr(self, 'lk_plan_count'):
+      return
+    try:
+      self.lk_plan_count.set_event_handler('click', self._toggle_plan)
+    except Exception:
+      pass
+    self._style_plan_link()
+
+  def _toggle_plan(self, **event_args):
+    self._plan_only = not self._plan_only
+    self.refresh_data()
+
+  def _style_plan_link(self):
+    if not hasattr(self, 'lk_plan_count'):
+      return
+    comp = self.lk_plan_count
+    try:
+      comp.bold = True
+      comp.border = f'1px solid {PLAN_CARD_COLOR}'
+      if self._plan_only:
+        comp.background = PLAN_CARD_COLOR
+        comp.foreground = '#FFFFFF'
+      else:
+        comp.background = ''
+        comp.foreground = PLAN_CARD_COLOR
+    except Exception:
+      pass
+
+  @staticmethod
+  def _plan_sort_val(row):
+    """Today's plan first in plan order; everything else after, by WO#."""
+    on_plan = bool(row.get('on_todays_plan'))
+    return (not on_plan, row.get('plan_position') or 10 ** 9,
+            row.get('work_order_number') or '')
 
   # =========================================================================
   # SORTING
@@ -108,6 +196,8 @@ class work_orders(work_ordersTemplate):
       self._sort_reverse = False
 
     def sort_val(row):
+      if key == 'plan_sort':
+        return self._plan_sort_val(row)
       val = row.get(key)
       if val is None or val == '':
         return '' if isinstance(val, str) else 0
@@ -134,14 +224,7 @@ class work_orders(work_ordersTemplate):
     if not selected:
       return
 
-    sort_map = {
-      'Due Date (Earliest)': 'due_date',
-      'SO# (Ascending)': 'sales_order_number',
-      'WO# (Ascending)': 'work_order_number',
-      'Part# (Ascending)': 'part_number',
-      'Created Date (Newest)': 'created_at',
-    }
-    key = sort_map.get(selected)
+    key = SORT_MAP.get(selected)
     if not key:
       return
 
@@ -149,6 +232,8 @@ class work_orders(work_ordersTemplate):
     reverse = self._sort_reverse
 
     def sort_val(row):
+      if key == 'plan_sort':
+        return self._plan_sort_val(row)
       val = row.get(key)
       if val is None or val == '':
         return '' if isinstance(val, str) else 0
@@ -208,15 +293,8 @@ class work_orders(work_ordersTemplate):
 
   @handle("dd_sort", "change")
   def dd_sort_change(self, **event_args):
-    sort_map = {
-      'Due Date (Earliest)': 'due_date',
-      'SO# (Ascending)': 'sales_order_number',
-      'WO# (Ascending)': 'work_order_number',
-      'Part# (Ascending)': 'part_number',
-      'Created Date (Newest)': 'created_at',
-    }
     selected = self.dd_sort.selected_value
-    key = sort_map.get(selected)
+    key = SORT_MAP.get(selected)
     if key:
       # Created Date (Newest) always sorts descending (newest first)
       if selected == 'Created Date (Newest)':

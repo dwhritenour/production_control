@@ -46,9 +46,14 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
 
     rel = item.get('sales_order_rel') or '001'
     so_num = item.get('sales_order_number', '')
+    # Daily Plan stamp (056): "Daily Plan M-3, today" / "M-3 (09/08)" / nothing
+    plan_bit = ''
+    if item.get('plan_label'):
+      plan_bit = (f"  |  Daily Plan {item.get('plan_label')}"
+                  + (', today' if item.get('on_todays_plan') else ''))
     self.lbl_detail_header.text = (
       f"Work Order Details — {item.get('work_order_number', '')}  "
-      f"|  SO {so_num}-{rel}"
+      f"|  SO {so_num}-{rel}{plan_bit}"
     )
 
     sku_level_notes = item.get('so_notes', '') or 'No SKU notes'

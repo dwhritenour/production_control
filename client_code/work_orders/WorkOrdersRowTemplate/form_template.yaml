@@ -50,5 +50,9 @@ components:
   name: dp_wo_due_date
   properties: {}
   type: DatePicker
+- layout_properties: {column: OVZFKY}
+  name: lbl_plan
+  properties: {}
+  type: Link
 container: {type: DataRowPanel}
 is_package: true

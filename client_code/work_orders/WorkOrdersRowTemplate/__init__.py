@@ -117,6 +117,50 @@ class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
     self.link_so_number.text = self.item.get('so_number_display', '')
     self.link_so_number.set_event_handler('click', self.show_backorder_detail)
 
+    # ---- Daily Plan stamp (056, 2026-09-09) ---------------------------------
+    # Same cue as the condensed grid: a work order on TODAY'S plan gets a
+    # green row and an arrow on the WO#; an older-day stamp (planned, never
+    # moved, not on today's plan) gets a pale amber row. If a Link/Label
+    # named lbl_plan sits in the Plan column it shows 'M-3' with tier colour
+    # and opens the Daily Plan app; otherwise the code-added column's auto
+    # cell shows plan_label on its own.
+    if hasattr(self, 'lbl_plan'):
+      self.lbl_plan.text = self.item.get('plan_label') or ''
+      tier = (self.item.get('plan_tier') or '')
+      self.lbl_plan.bold = bool(self.item.get('on_todays_plan'))
+      self.lbl_plan.foreground = {'Must': '#C62828', 'Next': '#EF6C00',
+                                  'Stretch': '#78909C'}.get(tier, '#455A64')
+      if self.item.get('plan_label'):
+        self.lbl_plan.tooltip = (f"{'Today' if self.item.get('on_todays_plan') else 'Planned'}"
+                                 f" {self.item.get('plan_label')} - open the Daily Plan")
+        try:
+          self.lbl_plan.set_event_handler('click', self._open_daily_plan)
+        except Exception:
+          pass                   # a Label has no click event; a Link does
+    try:
+      if self.item.get('on_todays_plan'):
+        self.background = '#E8F5E9'
+        self.link_wo_number.text = '\u25b6 ' + (self.item.get('work_order_number') or '')
+        self.link_wo_number.foreground = '#1B5E20'
+        self.link_wo_number.tooltip = f"On today's plan: {self.item.get('plan_label') or ''}"
+      elif self.item.get('plan_date'):
+        self.background = '#FFF8E1'
+        self.link_wo_number.tooltip = f"Planned {self.item.get('plan_label') or ''} - not on today's plan"
+      else:
+        self.background = ''
+    except Exception:
+      pass
+
+  DAILY_PLAN_URL = 'https://titan-plan.anvil.app'
+
+  def _open_daily_plan(self, **event_args):
+    """Open the Titan Daily Plan app in a new browser tab."""
+    try:
+      import anvil.js
+      anvil.js.window.open(self.DAILY_PLAN_URL, '_blank')
+    except Exception:
+      pass                     # nothing sensible to do in-app; stay put
+
   # =========================================================================
   # POPUPS
   # =========================================================================

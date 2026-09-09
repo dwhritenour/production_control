@@ -141,6 +141,16 @@ components:
         text: 'Changes: 0'
       type: Label
     - layout_properties: {}
+      name: lk_plan_count
+      properties:
+        bold: true
+        border: '1px solid #2cb0eb'
+        foreground: '#2cb0eb'
+        spacing:
+          padding: [null, '8', null, '8']
+        text: 'Plan: 0'
+      type: Label
+    - layout_properties: {}
       name: lbl_record_count
       properties: {align: right, font_size: 12, foreground: '#888888', icon: 'fa:arrow-right', text: 0 work orders}
       type: Label
@@ -161,6 +171,7 @@ components:
     properties:
       columns:
       - {data_key: '', expand: false, id: JKSDUP, title: WO#, width: '200'}
+      - {data_key: column_1, id: OVZFKY, title: Plan, width: '100'}
       - {data_key: '', expand: false, id: VJQQOR, title: Status, width: '200'}
       - {data_key: '', id: OJLQEN, title: SO#, width: '120'}
       - {data_key: sales_order_line, id: JIXSRC, title: Line, width: '100'}
