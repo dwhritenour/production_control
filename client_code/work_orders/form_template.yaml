@@ -124,8 +124,8 @@ components:
       name: lbl_complete_count
       properties:
         bold: true
-        border: '1px solid #4CAF50'
-        foreground: '#4CAF50'
+        border: '1px solid #C62828'
+        foreground: '#C62828'
         spacing:
           padding: [null, '8', null, '8']
         text: 'Complete: 0'
@@ -134,8 +134,8 @@ components:
       name: lbl_changes_count
       properties:
         bold: true
-        border: '1px solid #FF9800'
-        foreground: '#FF9800'
+        border: '1px solid #607D8B'
+        foreground: '#607D8B'
         spacing:
           padding: [null, '8', null, '8']
         text: 'Changes: 0'
@@ -193,93 +193,6 @@ components:
       rows_per_page: 15
       show_page_controls: false
     type: DataGrid
-  - components:
-    - layout_properties: {grid_position: 'MUAXYE,SSYNUW'}
-      name: lbl_detail_header
-      properties:
-        align: left
-        bold: true
-        font_size: 16
-        spacing:
-          margin: ['0', null, '0', null]
-          padding: [null, '5', null, '10']
-        text: Work Order Details
-      type: Label
-    - layout_properties: {grid_position: 'MUAXYE,BKCWPG'}
-      name: lbl_config_match
-      properties:
-        bold: true
-        foreground: Red if special, green if standard
-        spacing:
-          margin: ['0', null, '0', null]
-          padding: [null, '10', null, '5']
-      type: Label
-    - event_bindings: {}
-      layout_properties: {grid_position: 'MUAXYE,NLQFHE'}
-      name: link_hide
-      properties: {align: center, bold: false, font_size: 18, foreground: '#888888', icon: 'fa:times'}
-      type: Link
-    - layout_properties: {grid_position: 'GRSPWZ,NZUNHV ZTEYYB,ZGACGE'}
-      name: lbl_detail_notes
-      properties:
-        spacing:
-          margin: [null, null, '0', null]
-          padding: [null, '7', '0', '7']
-      type: RichText
-    - layout_properties: {grid_position: 'GRSPWZ,NZUNHV BWBRWR,YYFAKH'}
-      name: lbl_so_notes
-      properties:
-        spacing:
-          margin: ['0', null, null, null]
-          padding: ['0', '7', null, '7']
-      type: RichText
-    - layout_properties: {grid_position: 'GRSPWZ,BVUAWB OPBFAL,ATGABX'}
-      name: lbl_standard_config
-      properties:
-        spacing:
-          margin: [null, null, '0', null]
-          padding: [null, '7', '0', '7']
-      type: RichText
-    - layout_properties: {grid_position: 'GRSPWZ,BVUAWB SAYKOA,KPMDFE'}
-      name: lbl_ordered_config
-      properties:
-        spacing:
-          margin: ['0', null, null, null]
-          padding: ['0', '7', null, '7']
-      type: RichText
-    - layout_properties: {grid_position: 'GRSPWZ,BVUAWB YYJWKL,VXRWAM'}
-      name: lbl_changes_header
-      properties:
-        bold: true
-        font_size: 14
-        icon: ''
-        spacing:
-          padding: [null, null, null, '7']
-        text: Change History
-        underline: true
-        visible: false
-      type: Label
-    - layout_properties: {grid_position: 'GRSPWZ,BVUAWB ONLTYR,MAKDAF'}
-      name: rt_change_history
-      properties:
-        spacing:
-          padding: [null, '7', null, '7']
-        visible: false
-      type: RichText
-    - layout_properties: {grid_position: 'GRSPWZ,BVUAWB JGRCEN,BQEJXW'}
-      name: btn_acknowledge
-      properties:
-        icon: fa:check
-        role: elevated-button
-        spacing:
-          margin: ['10', null, '10', null]
-        text: Acknowledge Changes
-        visible: false
-      type: Button
-    layout_properties: {grid_position: 'JCSDPE,XMAAVH'}
-    name: panel_detail
-    properties: {background: '#F5F5F5', border: '1px solid #CCCCCC', col_widths: '{"SSYNUW":45,"BKCWPG":40,"NZUNHV":30,"BVUAWB":30,"NLQFHE":5}', visible: false}
-    type: ColumnPanel
   layout_properties: {slot: default}
   name: content_panel
   properties: {col_widths: '{}'}

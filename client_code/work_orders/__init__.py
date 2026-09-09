@@ -35,9 +35,10 @@ class work_orders(work_ordersTemplate):
     # GridPager custom component under the grid (optional - see
     # documents/GridPager_Component_Specification.md). Without it the
     # DataGrid's own paging applies, as before.
-    if hasattr(self, 'pager'):
+    _pg = self._find_pager()
+    if _pg is not None:
       try:
-        self.pager.attach(self.grid_work_orders, self.repeating_panel_1)
+        _pg.attach(self.grid_work_orders, self.repeating_panel_1)
       except Exception:
         pass
 
@@ -52,7 +53,7 @@ class work_orders(work_ordersTemplate):
       pass
 
     # Hide the old inline detail panel (kept in YAML for rollback, hidden permanently)
-    self.panel_detail.visible = False
+    # self.panel_detail.visible = False
 
     # Pre-filter from a deep link (e.g. WO link on Sales Orders Due form)
     if search_text:
@@ -145,13 +146,43 @@ class work_orders(work_ordersTemplate):
   # ROWS -> GRID  (through the GridPager component when one is present)
   # =========================================================================
   def _show_rows(self):
-    if hasattr(self, 'pager'):
+    _pg = self._find_pager()
+    if _pg is not None:
       try:
-        self.pager.items = self._work_orders
+        _pg.items = self._work_orders
         return
       except Exception:
         pass
     self.repeating_panel_1.items = self._work_orders
+
+  # =========================================================================
+  # GRID PAGER  (custom component grid_pager, any instance name)
+  # =========================================================================
+  def _find_pager(self):
+    """The grid_pager component dropped under the grid, whatever it was
+    named in the designer (pager, grid_pager_1, ...). Duck-typed: anything
+    with attach() and page_items. None when the form has no pager."""
+    if getattr(self, '_pager_cache', None) is not None:
+      return self._pager_cache
+    for name in ('pager', 'grid_pager_1', 'grid_pager'):
+      c = getattr(self, name, None)
+      if c is not None and hasattr(c, 'attach') and hasattr(c, 'page_items'):
+        self._pager_cache = c
+        return c
+    def walk(container):
+      try:
+        kids = container.get_components()
+      except Exception:
+        return None
+      for k in kids:
+        if hasattr(k, 'attach') and hasattr(k, 'page_items'):
+          return k
+        found = walk(k)
+        if found is not None:
+          return found
+      return None
+    self._pager_cache = walk(self)
+    return self._pager_cache
 
   # =========================================================================
   # CLICKABLE COUNT FILTERS  (click a count to apply that filter)
@@ -447,3 +478,5 @@ class work_orders(work_ordersTemplate):
   def btn_sms_test_click(self, **event_args):
     """This method is called when the button is clicked"""
     anvil.server.call('send_routing_notifications_now')
+
+

@@ -213,6 +213,10 @@ components:
         item_template: work_orders_condensed.CondensedRowTemplate
         margin: ['0', null, '4', null]
       type: RepeatingPanel
+    - layout_properties: {slot: footer}
+      name: pager
+      properties: {}
+      type: Transfer_Dashboard.grid_pager
     data_bindings: []
     layout_properties: {full_width_row: false, grid_position: 'TRVFKH,LFNVUC'}
     name: grid_active
@@ -232,46 +236,6 @@ components:
       rows_per_page: 15
       show_page_controls: false
     type: DataGrid
-  - components:
-    - components:
-      - layout_properties: {}
-        name: lk_first
-        properties: {font_size: 12, foreground: '#888888', italic: true}
-        type: Link
-      - components: []
-        layout_properties: {}
-        name: lk_prev
-        properties: {font_size: 12, foreground: '#888888', italic: true}
-        type: Link
-      - layout_properties: {}
-        name: lbl_paging
-        properties: {font_size: 12, foreground: '#888888', italic: true}
-        type: Label
-      - components: []
-        layout_properties: {}
-        name: lk_next
-        properties: {font_size: 12, foreground: '#888888', italic: true}
-        type: Link
-      - layout_properties: {}
-        name: lk_last
-        properties: {font_size: 12, foreground: '#888888', italic: true}
-        type: Link
-      layout_properties: {grid_position: 'PSRWAZ,SFXLXD'}
-      name: fp_footer
-      properties:
-        align: right
-        border: ''
-        spacing:
-          margin: ['0', null, '0', null]
-      type: FlowPanel
-    layout_properties: {grid_position: 'RKOMHF,BSIIHU'}
-    name: oc_footer
-    properties:
-      border: '1px solid #E7E0EC'
-      role: outlined-card
-      spacing:
-        padding: ['0', null, '0', null]
-    type: ColumnPanel
   layout_properties: {slot: default}
   name: content_panel
   properties: {col_widths: '{"LFNVUC":35}'}

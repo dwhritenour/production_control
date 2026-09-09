@@ -270,15 +270,45 @@ class work_orders_condensed(work_orders_condensedTemplate):
       pass
 
   # =========================================================================
+  # GRID PAGER  (custom component grid_pager, any instance name)
+  # =========================================================================
+  def _find_pager(self):
+    """The grid_pager component dropped under the grid, whatever it was
+    named in the designer (pager, grid_pager_1, ...). Duck-typed: anything
+    with attach() and page_items. None when the form has no pager."""
+    if getattr(self, '_pager_cache', None) is not None:
+      return self._pager_cache
+    for name in ('pager', 'grid_pager_1', 'grid_pager'):
+      c = getattr(self, name, None)
+      if c is not None and hasattr(c, 'attach') and hasattr(c, 'page_items'):
+        self._pager_cache = c
+        return c
+    def walk(container):
+      try:
+        kids = container.get_components()
+      except Exception:
+        return None
+      for k in kids:
+        if hasattr(k, 'attach') and hasattr(k, 'page_items'):
+          return k
+        found = walk(k)
+        if found is not None:
+          return found
+      return None
+    self._pager_cache = walk(self)
+    return self._pager_cache
+
+  # =========================================================================
   # CUSTOM PAGINATION  ("Showing X to Y of N entries")
   # =========================================================================
   def _wire_pager(self):
     # 2026-09-09: the footer is now the GridPager CUSTOM COMPONENT. If one
     # named `pager` sits under the grid it owns paging and oc_footer can be
     # deleted; the inline footer below stays as the fallback.
-    if hasattr(self, 'pager'):
+    _pg = self._find_pager()
+    if _pg is not None:
       try:
-        self.pager.attach(self.grid_active, self.repeating_panel_1)
+        _pg.attach(self.grid_active, self.repeating_panel_1)
         return
       except Exception:
         pass
@@ -308,9 +338,10 @@ class work_orders_condensed(work_orders_condensedTemplate):
     self._render_page()
 
   def _render_page(self):
-    if hasattr(self, 'pager'):
+    _pg = self._find_pager()
+    if _pg is not None:
       try:
-        self.pager.items = self._work_orders      # component paginates (page -> 1)
+        _pg.items = self._work_orders      # component paginates (page -> 1)
         return
       except Exception:
         pass
@@ -392,3 +423,8 @@ class work_orders_condensed(work_orders_condensedTemplate):
     self.dd_status_filter.selected_value = 'All'
     self._rush_only = False
     self.refresh_data()
+
+  @handle("pager", "page_change")
+  def pager_page_change(self, **event_args):
+    """This method is called Changes the page"""
+    pass  # Write Code Here

@@ -1,8 +1,8 @@
-from ._anvil_designer import GridPagerTemplate
+from ._anvil_designer import grid_pagerTemplate
 from anvil import *
 
 
-class GridPager(GridPagerTemplate):
+class grid_pager(grid_pagerTemplate):
   """
     Reusable DataGrid pager - a CUSTOM COMPONENT (2026-09-09).
 
@@ -11,7 +11,9 @@ class GridPager(GridPagerTemplate):
     lk_last) since 2026-06-17. This is that footer as a component any
     form can drop under any DataGrid.
 
-    Designer (see documents/GridPager_Component_Specification.md):
+    Form name in this app: grid_pager (Anvil generates grid_pagerTemplate and
+    looks for a class with the FORM's name - the class below must stay
+    grid_pager). Designer (documents/GridPager_Component_Specification.md):
       form settings -> "custom component" ON
       property  rows_per_page   Number   default 15
       event     page_change     (fired after every re-render)
@@ -20,9 +22,10 @@ class GridPager(GridPagerTemplate):
         lk_next   Link     lk_last  Link
       (font 12, grey #888888, italic - text is set here in code)
 
-    Use from a host form:
-      self.pager.attach(self.grid_work_orders, self.repeating_panel_1)  # once
-      self.pager.items = rows        # after every load or sort (page -> 1)
+    Use from a host form (drop it under the grid; ANY instance name - the
+    host forms find it by duck typing, see _find_pager):
+      pager.attach(self.grid_work_orders, self.repeating_panel_1)  # once
+      pager.items = rows        # after every load or sort (page -> 1)
     The pager sets the RepeatingPanel's items itself. Read
     self.pager.page_items for the rows currently shown, self.pager.page for
     the 0-based page. rows_per_page can be changed at runtime too.
