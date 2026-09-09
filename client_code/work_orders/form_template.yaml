@@ -187,8 +187,13 @@ components:
       margin: [null, '0', null, '0']
       role: [horizontal-scroll, tonal-data-grid]
       rows_per_page: 15
+      show_page_controls: false
     type: DataGrid
   - components:
+    - layout_properties: {grid_position: 'WESQTY,EJDGZB'}
+      name: grid_pager_1
+      properties: {}
+      type: Transfer_Dashboard.grid_pager
     - layout_properties: {grid_position: 'MUAXYE,SSYNUW'}
       name: lbl_detail_header
       properties:

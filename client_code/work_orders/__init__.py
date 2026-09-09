@@ -29,6 +29,18 @@ class work_orders(work_ordersTemplate):
     self._sort_reverse = False
     self._work_orders = []
 
+    # Count row acts like buttons (2026-09-09, from work_orders_condensed)
+    self._wire_count_filters()
+
+    # GridPager custom component under the grid (optional - see
+    # documents/GridPager_Component_Specification.md). Without it the
+    # DataGrid's own paging applies, as before.
+    if hasattr(self, 'pager'):
+      try:
+        self.pager.attach(self.grid_work_orders, self.repeating_panel_1)
+      except Exception:
+        pass
+
     # Daily Plan (056): 'Plan' column, chip, plan-only filter, sort option
     self._plan_only = False
     self._add_plan_column()
@@ -87,7 +99,7 @@ class work_orders(work_ordersTemplate):
       # Re-apply active sort if one is selected
       self._reapply_sort()
 
-      self.repeating_panel_1.items = self._work_orders
+      self._show_rows()
 
       # Update record count
       count = len(result['work_orders'])
@@ -107,6 +119,7 @@ class work_orders(work_ordersTemplate):
         self.lk_plan_count.text = (f"Plan: {counts.get('plan_released', 0)}/"
                                    f"{counts.get('plan_today', 0)} released")
       self._style_plan_link()
+      self._style_count_links()
 
       # Update last refreshed
       from datetime import datetime
@@ -127,6 +140,80 @@ class work_orders(work_ordersTemplate):
     self.cb_backorder_only.checked = False
     self._plan_only = False
     self.refresh_data()
+
+  # =========================================================================
+  # ROWS -> GRID  (through the GridPager component when one is present)
+  # =========================================================================
+  def _show_rows(self):
+    if hasattr(self, 'pager'):
+      try:
+        self.pager.items = self._work_orders
+        return
+      except Exception:
+        pass
+    self.repeating_panel_1.items = self._work_orders
+
+  # =========================================================================
+  # CLICKABLE COUNT FILTERS  (click a count to apply that filter)
+  # =========================================================================
+  # attr -> (filter value, color). Colors match the work-order ROW status
+  # colors so the whole app is consistent. Set in code so they never need to
+  # be picked by hand in the designer. Make the count components LINKS in the
+  # designer (same names) - a Label has no click event.
+  COUNT_STYLES = {
+    'lbl_created_count':     ('Created',         '#2196F3'),  # blue
+    'lbl_in_progress_count': ('In Progress',     '#FF9800'),  # amber
+    'lbl_complete_count':    ('Complete',        '#4CAF50'),  # green
+    'lbl_changes_count':     ('Pending Changes', '#7B2FBE'),  # purple
+  }
+
+  def _wire_count_filters(self):
+    for attr, (fval, color) in self.COUNT_STYLES.items():
+      if not hasattr(self, attr):
+        continue
+      comp = getattr(self, attr)
+      for prop, val in (('foreground', color),
+                        ('border', f'1px solid {color}'),
+                        ('bold', True)):
+        try:
+          setattr(comp, prop, val)
+        except Exception:
+          pass
+      try:
+        comp.set_event_handler('click', lambda f=fval, **e: self._filter_by(f))
+      except Exception:
+        pass                       # still a Label -> styled, not clickable
+    if hasattr(self, 'lbl_record_count'):
+      try:
+        self.lbl_record_count.set_event_handler(
+          'click', lambda **e: self._filter_by('All'))
+      except Exception:
+        pass
+
+  def _filter_by(self, status_value):
+    self.dd_status_filter.selected_value = status_value
+    self.refresh_data()
+
+  def _style_count_links(self):
+    """Fill the active status chip and outline the rest. Only one status
+    filter is active at a time (dd_status_filter); 'All' leaves every chip
+    outlined."""
+    active = self.dd_status_filter.selected_value
+    for attr, (fval, color) in self.COUNT_STYLES.items():
+      if not hasattr(self, attr):
+        continue
+      comp = getattr(self, attr)
+      try:
+        comp.bold = True
+        comp.border = f'1px solid {color}'
+        if active == fval:
+          comp.background = color
+          comp.foreground = '#FFFFFF'
+        else:
+          comp.background = ''
+          comp.foreground = color
+      except Exception:
+        pass
 
   # =========================================================================
   # DAILY PLAN  (056: 'Plan' column + chip; click the chip for plan-only)
@@ -215,12 +302,12 @@ class work_orders(work_ordersTemplate):
       return val
 
     self._work_orders.sort(key=sort_val, reverse=self._sort_reverse)
-    self.repeating_panel_1.items = self._work_orders
+    self._show_rows()
 
   def _reapply_sort(self):
     """Re-apply the current dd_sort selection to self._work_orders.
     Called after refresh_data loads fresh server data."""
-    selected = self.dd_sort.selected_value
+    selected = (self.dd_sort.selected_value or '').strip()
     if not selected:
       return
 
@@ -293,7 +380,8 @@ class work_orders(work_ordersTemplate):
 
   @handle("dd_sort", "change")
   def dd_sort_change(self, **event_args):
-    selected = self.dd_sort.selected_value
+    # .strip(): the designer list has 'WO# (Ascending) ' with a trailing space
+    selected = (self.dd_sort.selected_value or '').strip()
     key = SORT_MAP.get(selected)
     if key:
       # Created Date (Newest) always sorts descending (newest first)
@@ -315,7 +403,7 @@ class work_orders(work_ordersTemplate):
               return val
 
         self._work_orders.sort(key=sort_val, reverse=True)
-        self.repeating_panel_1.items = self._work_orders
+        self._show_rows()
       else:
         self.sort_by(key)
 

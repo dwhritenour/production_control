@@ -273,6 +273,15 @@ class work_orders_condensed(work_orders_condensedTemplate):
   # CUSTOM PAGINATION  ("Showing X to Y of N entries")
   # =========================================================================
   def _wire_pager(self):
+    # 2026-09-09: the footer is now the GridPager CUSTOM COMPONENT. If one
+    # named `pager` sits under the grid it owns paging and oc_footer can be
+    # deleted; the inline footer below stays as the fallback.
+    if hasattr(self, 'pager'):
+      try:
+        self.pager.attach(self.grid_active, self.repeating_panel_1)
+        return
+      except Exception:
+        pass
     # Only take over paging if the pager components exist; otherwise leave the
     # DataGrid's built-in pager alone (safe to paste before building them).
     if all(hasattr(self, a) for a in ('lk_prev', 'lk_next', 'lbl_paging')):
@@ -299,6 +308,12 @@ class work_orders_condensed(work_orders_condensedTemplate):
     self._render_page()
 
   def _render_page(self):
+    if hasattr(self, 'pager'):
+      try:
+        self.pager.items = self._work_orders      # component paginates (page -> 1)
+        return
+      except Exception:
+        pass
     have_pager = all(hasattr(self, a) for a in ('lk_prev', 'lk_next', 'lbl_paging'))
     total = len(self._work_orders)
     if not have_pager:
