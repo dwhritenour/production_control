@@ -17,6 +17,13 @@ RUSH_CARD_COLOR = '#E65100'
 # Daily Plan chip accent (056): today's published plan, released / total.
 PLAN_CARD_COLOR = '#1B5E20'
 
+# Theme role for the count / Rush / Plan chips (Dave, 2026-09-09): the Link's
+# built-in 8px padding cannot be changed in the designer, so a custom role
+# 'count-chip' in the App Theme carries padding + radius. Code applies it here
+# so both work-order forms stay identical. Blank it to fall back to plain Links.
+CHIP_ROLE = 'count-chip'
+
+
 SORT_MAP = {
   'Plan (position)': 'plan_sort',
   'Due Date (Earliest)': 'wo_due_date',
@@ -143,7 +150,10 @@ class work_orders_condensed(work_orders_condensedTemplate):
       comp = getattr(self, attr)
       for prop, val in (('foreground', color),
                         ('border', f'1px solid {color}'),
-                        ('bold', True)):
+                        ('bold', True),
+                        ('role', CHIP_ROLE)):
+        if prop == 'role' and not val:
+          continue
         try:
           setattr(comp, prop, val)
         except Exception:
@@ -196,6 +206,11 @@ class work_orders_condensed(work_orders_condensedTemplate):
       self.lk_rush_count.set_event_handler('click', self._toggle_rush)
     except Exception:
       pass
+    if CHIP_ROLE:
+      try:
+        self.lk_rush_count.role = CHIP_ROLE
+      except Exception:
+        pass
     self._style_rush_link()
 
   def _toggle_rush(self, **event_args):
@@ -247,6 +262,11 @@ class work_orders_condensed(work_orders_condensedTemplate):
       self.lk_plan_count.set_event_handler('click', self._toggle_plan)
     except Exception:
       pass
+    if CHIP_ROLE:
+      try:
+        self.lk_plan_count.role = CHIP_ROLE
+      except Exception:
+        pass
     self._style_plan_link()
 
   def _toggle_plan(self, **event_args):
@@ -423,8 +443,3 @@ class work_orders_condensed(work_orders_condensedTemplate):
     self.dd_status_filter.selected_value = 'All'
     self._rush_only = False
     self.refresh_data()
-
-  @handle("pager", "page_change")
-  def pager_page_change(self, **event_args):
-    """This method is called Changes the page"""
-    pass  # Write Code Here

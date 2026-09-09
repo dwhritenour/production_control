@@ -7,6 +7,13 @@ import anvil.server
 # Chip accent = plan green; the chip is the optional Link lk_plan_count.
 PLAN_CARD_COLOR = '#1B5E20'
 
+# Theme role for the count / Rush / Plan chips (Dave, 2026-09-09): the Link's
+# built-in 8px padding cannot be changed in the designer, so a custom role
+# 'count-chip' in the App Theme carries padding + radius. Code applies it here
+# so both work-order forms stay identical. Blank it to fall back to plain Links.
+CHIP_ROLE = 'count-chip'
+
+
 SORT_MAP = {
   'Plan (position)': 'plan_sort',
   'Due Date (Earliest)': 'due_date',
@@ -205,7 +212,10 @@ class work_orders(work_ordersTemplate):
       comp = getattr(self, attr)
       for prop, val in (('foreground', color),
                         ('border', f'1px solid {color}'),
-                        ('bold', True)):
+                        ('bold', True),
+                        ('role', CHIP_ROLE)):
+        if prop == 'role' and not val:
+          continue
         try:
           setattr(comp, prop, val)
         except Exception:
@@ -273,6 +283,11 @@ class work_orders(work_ordersTemplate):
       self.lk_plan_count.set_event_handler('click', self._toggle_plan)
     except Exception:
       pass
+    if CHIP_ROLE:
+      try:
+        self.lk_plan_count.role = CHIP_ROLE
+      except Exception:
+        pass
     self._style_plan_link()
 
   def _toggle_plan(self, **event_args):
@@ -478,5 +493,3 @@ class work_orders(work_ordersTemplate):
   def btn_sms_test_click(self, **event_args):
     """This method is called when the button is clicked"""
     anvil.server.call('send_routing_notifications_now')
-
-

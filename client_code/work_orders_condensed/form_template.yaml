@@ -97,7 +97,7 @@ components:
           border: '1px solid #2196F3'
           font_size: 12
           foreground: '#2196F3'
-          role: count-chip
+          role: null
           spacing:
             padding: ['3', '4', null, '4']
           text: 'Created: 0'
@@ -110,7 +110,7 @@ components:
           border: '1px solid #00897B'
           font_size: 12
           foreground: '#00897B'
-          role: count-chip
+          role: null
           spacing:
             padding: ['3', '4', null, '4']
           text: 'Released: 0'
@@ -122,7 +122,7 @@ components:
           border: '1px solid #607D8B'
           font_size: 12
           foreground: '#607D8B'
-          role: count-chip
+          role: null
           spacing:
             padding: ['3', '4', null, '4']
           text: 'Assigned: 0'
@@ -135,7 +135,7 @@ components:
           border: '1px solid #FF9800'
           font_size: 12
           foreground: '#FF9800'
-          role: count-chip
+          role: null
           spacing:
             padding: ['3', '4', null, '4']
           text: 'In Progress: 0'
@@ -147,7 +147,7 @@ components:
           border: '1px solid #E65100'
           font_size: 12
           foreground: '#E65100'
-          role: count-chip
+          role: null
           spacing:
             padding: ['3', '4', null, '4']
           text: 'Rush: 0'
@@ -159,7 +159,7 @@ components:
           border: '1px solid #2cb0eb'
           font_size: 12
           foreground: '#2cb0eb'
-          role: count-chip
+          role: null
           spacing:
             padding: ['3', '4', null, '4']
           text: 'Plan: 0'
@@ -172,7 +172,7 @@ components:
           border: '1px solid #C62828'
           font_size: 12
           foreground: '#C62828'
-          role: count-chip
+          role: null
           spacing:
             padding: ['3', '4', null, '4']
           text: 'Paused: 0'
@@ -184,7 +184,7 @@ components:
           border: '1px solid #7B2FBE'
           font_size: 12
           foreground: '#7B2FBE'
-          role: count-chip
+          role: null
           spacing:
             padding: ['3', '4', null, '4']
           text: 'Changes: 0'
