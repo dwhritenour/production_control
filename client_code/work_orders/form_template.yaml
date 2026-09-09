@@ -147,9 +147,9 @@ components:
         border: '1px solid #2cb0eb'
         foreground: '#2cb0eb'
         spacing:
-          padding: [null, '8', null, '8']
+          padding: [null, '4', null, '4']
         text: 'Plan: 0'
-      type: Label
+      type: Link
     - layout_properties: {}
       name: lbl_record_count
       properties: {align: right, font_size: 12, foreground: '#888888', icon: 'fa:arrow-right', text: 0 work orders}
