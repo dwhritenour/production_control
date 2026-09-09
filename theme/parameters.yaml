@@ -335,3 +335,5 @@ roles:
   name: horizontal-scroll
 - components: [Link]
   name: change-badge
+- components: [Link]
+  name: count-chip

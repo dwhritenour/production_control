@@ -106,7 +106,7 @@ components:
         bold: true
         border: '1px solid #2196F3'
         foreground: '#2196F3'
-        role: null
+        role: count-chip
         spacing:
           padding: [null, '4', null, '4']
         text: 'Created: 0'
@@ -118,6 +118,7 @@ components:
         bold: true
         border: '1px solid #FF9800'
         foreground: '#FF9800'
+        role: count-chip
         spacing:
           padding: [null, '4', null, '4']
         text: 'In Progress: 0'
@@ -129,6 +130,7 @@ components:
         bold: true
         border: '1px solid #C62828'
         foreground: '#C62828'
+        role: count-chip
         spacing:
           padding: [null, '4', null, '4']
         text: 'Complete: 0'
@@ -140,6 +142,7 @@ components:
         bold: true
         border: '1px solid #607D8B'
         foreground: '#607D8B'
+        role: count-chip
         spacing:
           padding: [null, '4', null, '4']
         text: 'Changes: 0'
@@ -151,6 +154,7 @@ components:
         bold: true
         border: '1px solid #2cb0eb'
         foreground: '#2cb0eb'
+        role: count-chip
         spacing:
           padding: [null, '4', null, '4']
         text: 'Plan: 0'
