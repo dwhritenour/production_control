@@ -171,8 +171,11 @@ components:
         padding: ['0', null, null, null]
     type: FlowPanel
   - components:
-    - name: repeating_panel_1
-      properties: {item_template: work_orders.WorkOrdersRowTemplate}
+    - layout_properties: {}
+      name: repeating_panel_1
+      properties:
+        item_template: work_orders.WorkOrdersRowTemplate
+        margin: ['0', null, null, null]
       type: RepeatingPanel
     - layout_properties: {slot: footer}
       name: grid_pager_1
@@ -189,7 +192,7 @@ components:
       - {data_key: '', id: OJLQEN, title: SO#, width: '120'}
       - {data_key: sales_order_line, id: JIXSRC, title: Line, width: '100'}
       - {data_key: part_number, id: NTNWAU, title: Part#, width: '160'}
-      - {data_key: column_1, id: SEBNMW, title: Description, width: '200'}
+      - {data_key: column_1, id: SEBNMW, title: Description, width: '220'}
       - {data_key: material_value, id: SVQOSD, title: Material, width: '160'}
       - {data_key: se_value, id: NEORKT, title: SE, width: '160'}
       - {data_key: quantity, expand: false, id: CFDXLR, title: Qty, width: 97.5}
