@@ -64,6 +64,14 @@ components:
         margin: ['0', null, '0', null]
         padding: ['0', null, '0', null]
     type: Label
+  - layout_properties: {grid_position: 'JJCDYZ,JHOVEM'}
+    name: lbl_desc
+    properties:
+      font_size: 12
+      spacing:
+        margin: ['0', null, '0', null]
+        padding: ['0', null, '0', null]
+    type: Label
   layout_properties: {column: NTNWAU}
   name: cp_stacked
   properties: {}

@@ -52,6 +52,7 @@ class work_orders(work_ordersTemplate):
     # Daily Plan (056): 'Plan' column, chip, plan-only filter, sort option
     self._plan_only = False
     self._add_plan_column()
+    self._add_desc_column()
     self._wire_plan_filter()
     try:
       if 'Plan (position)' not in (self.dd_sort.items or []):
@@ -60,7 +61,8 @@ class work_orders(work_ordersTemplate):
       pass
 
     # Hide the old inline detail panel (kept in YAML for rollback, hidden permanently)
-    # self.panel_detail.visible = False
+    if hasattr(self, 'panel_detail'):          # old inline panel; deleted 09-09
+      self.panel_detail.visible = False
 
     # Pre-filter from a deep link (e.g. WO link on Sales Orders Due form)
     if search_text:
@@ -272,6 +274,25 @@ class work_orders(work_ordersTemplate):
         return
       cols.insert(1, {'id': 'PLAN056', 'title': 'Plan',
                       'data_key': 'plan_label', 'width': '90'})
+      self.grid_work_orders.columns = cols
+    except Exception:
+      pass
+
+  def _add_desc_column(self):
+    """058: a 'Description' column (item['sku_desc'] - the SO line's
+    description, the real spec of a non-stock line) right after Part#.
+    Code-added unless the designer already has a column titled
+    'Description' or keyed sku_desc."""
+    try:
+      cols = list(self.grid_work_orders.columns or [])
+      if any((c.get('data_key') == 'sku_desc'
+              or (c.get('title') or '').strip().lower() == 'description') for c in cols):
+        return
+      after = next((i for i, c in enumerate(cols)
+                    if c.get('data_key') == 'part_number'
+                    or (c.get('title') or '').strip().lower() == 'part#'), 1)
+      cols.insert(after + 1, {'id': 'DESC058', 'title': 'Description',
+                              'data_key': 'sku_desc', 'width': '220'})
       self.grid_work_orders.columns = cols
     except Exception:
       pass

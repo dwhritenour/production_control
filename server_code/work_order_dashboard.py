@@ -84,6 +84,13 @@ def _has_plan_columns(cursor):
   return bool(row and row.get('c') is not None)
 
 
+def _has_desc_column(cursor):
+  """True once 058 (work_orders.sku_desc) is applied."""
+  cursor.execute("SELECT COL_LENGTH('dbo.work_orders', 'sku_desc') AS c")
+  row = cursor.fetchone()
+  return bool(row and row.get('c') is not None)
+
+
 def _plan_label(tier, position, plan_date_str, on_today):
   """'M-3' for today's plan; 'M-3 (09/08)' when the stamp is an older day
   (the line was planned, never moved, and is not on today's plan)."""
@@ -140,6 +147,13 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
     if limit:
       top_clause = f'TOP ({int(limit) + 1}) '
     has_plan = _has_plan_columns(cursor)
+    # 058 (2026-09-10): the SO line's description. Non-stock lines (part
+    # status N - 'GASKET ONLY', 'SCREEN ONLY' ...) carry their real spec
+    # here. Live value while the SO line is on the book, stored copy after.
+    if _has_desc_column(cursor):
+      desc_col = "COALESCE(so.nx_sku_desc, wo.sku_desc) AS sku_desc,"
+    else:
+      desc_col = "so.nx_sku_desc AS sku_desc,"
     if has_plan:
       plan_cols = ("\n            wo.plan_date, wo.plan_tier, wo.plan_position,"
                    "\n            CASE WHEN wo.plan_date = CAST(GETDATE() AS DATE)"
@@ -175,6 +189,8 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
             COALESCE(so.nx_notes, wo.notes)              AS so_notes,
             COALESCE(so.nx_so_notes, wo.so_notes)        AS so_level_notes, 
             COALESCE(so.nx_attrib_val, wo.attribute_value) AS so_attrib_val,
+            {desc_col}
+            CASE WHEN so.nx_part_status = 'N' THEN 1 ELSE 0 END AS is_nonstock,
             so.nx_dship_by_date AS so_ship_by_date,
             ad.nx_attribute_value AS standard_attrib_val,
             so.nx_carrier,
@@ -306,6 +322,10 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
         serialized['material_se'] = f"{_mat} / {_se}"
       else:
         serialized['material_se'] = _mat or _se or ''
+
+      # SO line description (058) - the spec for non-stock lines
+      serialized['sku_desc'] = (serialized.get('sku_desc') or '').strip()
+      serialized['is_nonstock'] = int(serialized.get('is_nonstock') or 0)
 
       # Daily Plan stamp (056): 'M-3' / 'N-12' / 'S-2' (+ date when not today)
       serialized['on_todays_plan'] = int(serialized.get('on_todays_plan') or 0)

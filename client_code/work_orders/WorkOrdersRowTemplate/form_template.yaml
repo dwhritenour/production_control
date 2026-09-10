@@ -54,5 +54,9 @@ components:
   name: lbl_plan
   properties: {}
   type: Link
+- layout_properties: {column: SEBNMW}
+  name: lbl_desc
+  properties: {}
+  type: Label
 container: {type: DataRowPanel}
 is_package: true

@@ -57,8 +57,11 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
     )
 
     sku_level_notes = item.get('so_notes', '') or 'No SKU notes'
+    # 058: the SO line description first - for non-stock lines it IS the spec
+    _desc = (item.get('sku_desc') or '').strip()
+    _desc_line = (f"**Description:**&nbsp;&nbsp;&nbsp; {_desc}  \n" if _desc else '')
     self.lbl_detail_notes.content = (
-      f"**SKU Notes:**&nbsp;&nbsp;&nbsp; {sku_level_notes}"
+      f"{_desc_line}**SKU Notes:**&nbsp;&nbsp;&nbsp; {sku_level_notes}"
     )
 
     so_level_notes = item.get('so_level_notes', '') or 'No sales order notes'

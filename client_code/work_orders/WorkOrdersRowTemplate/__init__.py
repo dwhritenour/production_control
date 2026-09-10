@@ -117,6 +117,13 @@ class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
     self.link_so_number.text = self.item.get('so_number_display', '')
     self.link_so_number.set_event_handler('click', self.show_backorder_detail)
 
+    # ---- SO line description (061) ------------------------------------------
+    # The Description column is code-added in the parent (auto cell shows
+    # sku_desc). A Label named lbl_desc placed in that column takes over;
+    # formatting stays the designer's (Dave, 09-10: no bold).
+    if hasattr(self, 'lbl_desc'):
+      self.lbl_desc.text = self.item.get('sku_desc') or ''
+
     # ---- Daily Plan stamp (056, 2026-09-09) ---------------------------------
     # Same cue as the condensed grid: a work order on TODAY'S plan gets a
     # green row and an arrow on the WO#; an older-day stamp (planned, never

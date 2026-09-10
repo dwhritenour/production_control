@@ -73,7 +73,8 @@ def get_so_work_orders(sales_order_number, sales_order_rel):
       wo.status,
       wo.due_date,
       COALESCE(so.nx_attrib_val, wo.attribute_value) AS so_attrib_val,
-      ad.nx_attribute_value AS standard_attrib_val
+      ad.nx_attribute_value AS standard_attrib_val,
+      so.nx_sku_desc        AS sku_desc
     FROM dbo.work_orders wo
     LEFT JOIN dbo.sales_orders_due so
       ON wo.sales_order_number = so.nx_order_numb
@@ -291,10 +292,16 @@ def build_cover_page_elements(sales_order_number, sales_order_rel,
     else:
       qty_str = str(int(wo.get('quantity', 0))) if wo.get('quantity') else ''
 
+    # 058: the SO line description under the part number (non-stock spec)
+    _desc = str(wo.get('sku_desc') or '').strip()
+    _desc = _desc.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    _part_cell = str(wo.get('part_number', ''))
+    if _desc:
+      _part_cell += f"<br/><font size='7'>{_desc}</font>"
     table_data.append([
       Paragraph(str(wo.get('sales_order_line', '')), s['normal']),
       Paragraph(str(wo.get('work_order_number', '')), s['bold']),
-      Paragraph(str(wo.get('part_number', '')), s['normal']),
+      Paragraph(_part_cell, s['normal']),
       Paragraph(qty_str, s['normal']),
       Paragraph(f"<font color='{config_color}'><b>{config_text}</b></font>",
                 s['normal']),
@@ -479,7 +486,7 @@ def build_wo_page_elements(data, page_num, total_pages, styles_dict):
     [Paragraph("<b>Part Number:</b>", s['normal']),
      Paragraph(data.get('part_number', ''), s['normal']),
      Paragraph("<b>Description:</b>", s['normal']),
-     Paragraph(data.get('part_sku', ''), s['normal'])],
+     Paragraph(data.get('part_desc', '') or data.get('part_sku', ''), s['normal'])],
     [Paragraph("<b>Quantity:</b>", s['normal']),
      Paragraph(qty_display, s['bold']),
      Paragraph("<b>WO Due Date:</b>", s['normal']),

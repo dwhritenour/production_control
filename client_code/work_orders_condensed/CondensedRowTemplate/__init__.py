@@ -56,6 +56,21 @@ class CondensedRowTemplate(CondensedRowTemplateTemplate):
     self.lbl_part.text = self.item.get('part_number', '')
     self.lbl_material.text = self.item.get('material_se', '')
 
+    # ---- SO line description (061) - stacked under Part# / Material ------
+    # A Label named lbl_desc in cp_stacked shows it; its formatting is the
+    # designer's (same as lbl_material - Dave, 09-10: no bold). Until it
+    # exists, a non-stock line's spec goes into lbl_material, which is empty
+    # for non-stock anyway (no material / SE attribute).
+    _desc = (self.item.get('sku_desc') or '').strip()
+    if hasattr(self, 'lbl_desc'):
+      self.lbl_desc.text = _desc
+      self.lbl_desc.visible = bool(_desc)
+    elif _desc and not self.lbl_material.text:
+      self.lbl_material.text = _desc
+    # An empty Label still takes a line; a hidden one takes none (Dave, 09-10:
+    # no gap between Part# and the description when there is no material).
+    self.lbl_material.visible = bool(self.lbl_material.text)
+
     # ---- Qty (Label so it can be formatted in the designer) --------------
     if hasattr(self, 'lbl_qty'):
       qty = self.item.get('quantity')
