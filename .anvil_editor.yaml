@@ -24,13 +24,13 @@ unique_ids:
     work_orders.WorkOrdersRowTemplate: '1771698074094856785874691.6118'
     work_orders_condensed: '1781728258576381436737928.5629'
     work_orders_condensed.CondensedRowTemplate: '17817283984941159598881.0995107'
-  modules: {}
+  modules:
+    routing_diagram: '1789230456850944027831014.493'
   scripts: {}
   server_modules:
     db_config: '1768312206033271430192205.91403'
     part_master: '1784646784136113162105913.8601'
     routing_dashboard: '1784054288835405149469266.8594'
-    routing_diagram: '1789230056627304843868997.49817'
     routing_notifications: '1784921980513842057819538.6547'
     sales_orders_due_dashboard: '1777831600177523754369677.1554'
     sms_diagnostic: '177093515189491218090038.15407'
