@@ -117,6 +117,14 @@ class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
     self.link_so_number.text = self.item.get('so_number_display', '')
     self.link_so_number.set_event_handler('click', self.show_backorder_detail)
 
+    # ---- Routing diagram link (2026-09-12) -----------------------------------
+    # 'View' opens the swim-lane routing diagram for this WO in a popup
+    # (routing_diagram.show_routing_popup, reads get_wo_routing). If the
+    # designer placed a Link named lk_routing in the Routing column it is
+    # used; otherwise one is added in code to the column the parent form
+    # created (work_orders._add_routing_column).
+    self._wire_routing_link(status)
+
     # ---- SO line description (061) ------------------------------------------
     # The Description column is code-added in the parent (auto cell shows
     # sku_desc). A Label named lbl_desc placed in that column takes over;
@@ -157,6 +165,47 @@ class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
         self.background = ''
     except Exception:
       pass
+
+  # Statuses that always carry a saved routing (release writes it). A
+  # 'Created' WO may still have one (UnRelease keeps the snapshot), so the
+  # link shows for every row; the popup explains when nothing is saved.
+  ROUTED_STATUSES = ('Released', 'Assigned', 'In Progress', 'Paused', 'Complete')
+
+  def _wire_routing_link(self, status):
+    link = getattr(self, 'lk_routing', None)
+    if link is None:
+      col_id = None
+      try:
+        parent = get_open_form()
+        if hasattr(parent, 'routing_column_id'):
+          col_id = parent.routing_column_id()
+      except Exception:
+        col_id = None
+      if not col_id:
+        return                      # no Routing column on this grid
+      link = Link(text='View')
+      try:
+        self.add_component(link, column=col_id)
+      except Exception:
+        return
+    link.text = 'View'
+    link.tooltip = 'Show the routing diagram for this work order'
+    if status in self.ROUTED_STATUSES:
+      link.bold = True
+    else:
+      link.foreground = '#78909C'   # muted: may not be routed yet
+    try:
+      link.set_event_handler('click', self.show_routing)
+    except Exception:
+      pass
+
+  def show_routing(self, **event_args):
+    """Popup: swim-lane routing diagram for this work order."""
+    from ... import routing_diagram
+    routing_diagram.show_routing_popup(
+      self.item.get('work_order_id'),
+      self.item.get('work_order_number', ''),
+      self.item.get('part_number', ''))
 
   DAILY_PLAN_URL = 'https://titan-plan.anvil.app'
 

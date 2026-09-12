@@ -182,29 +182,12 @@ class sku_details(sku_detailsTemplate):
   # Working list <-> display
   # ===================================================================
   def _steps_from_rows(self, rows):
-    """DB rows (gapped sequence_numbers) -> working list with display
-    numbers 1..n; rows sharing a sequence_number share a display number."""
-    seqs = sorted({r['sequence_number'] for r in rows})
-    disp = {s: i + 1 for i, s in enumerate(seqs)}
-    return [{'seq': disp[r['sequence_number']],
-             'department_id': r['department_id'],
-             'step_notes': (r.get('step_notes') or '')}
-            for r in rows]
+    from .. import routing_diagram
+    return routing_diagram.steps_from_rows(rows)
 
   def _step_codes(self):
-    """A01.01 codes for the (sorted) working list. Letter = department,
-    2-digit = routing step (sequence group), .2-digit = that DEPARTMENT'S
-    step count across the WHOLE routing (Dave 2026-07-23: F04.01 then
-    F05.02 - Material Handling's first and second steps)."""
-    disp = {g: i + 1 for i, g in enumerate(sorted({s['seq'] for s in self._steps}))}
-    counters, codes = {}, []
-    for s in self._steps:
-      gd = disp[s['seq']]
-      dept = s['department_id']
-      counters[dept] = counters.get(dept, 0) + 1
-      letter = self._dept_codes.get(dept, '?')
-      codes.append(f"{letter}{gd:02d}.{counters[dept]:02d}")
-    return codes
+    from .. import routing_diagram
+    return routing_diagram.step_codes(self._steps, self._dept_codes)
 
   def _render(self):
     self._steps.sort(key=lambda s: s['seq'])   # stable: keeps entry order in group
@@ -233,120 +216,14 @@ class sku_details(sku_detailsTemplate):
     self._render()
 
   # ===================================================================
-  # Flow diagram (client-built SVG — redraws on every change)
+  # Flow diagram — drawn by the shared client module routing_diagram
+  # (2026-09-12: lifted out of this form so the work_orders grid can show
+  # the same picture in a popup). Redraws on every change.
   # ===================================================================
-  # Lane colors keyed by dept_code: (node fill, stroke/header text).
-  # Identity is carried by the letter + header TEXT - color is decoration.
-  _LANE_COLORS = {
-    'A': ('#FCE4E4', '#C62828'), 'B': ('#FCE4F1', '#AD1457'),
-    'C': ('#EDE7F6', '#6A1B9A'), 'D': ('#E8EAF6', '#283593'),
-    'E': ('#E3F2FD', '#1565C0'), 'F': ('#E0F2F1', '#00695C'),
-    'G': ('#E8F5E9', '#2E7D32'), 'H': ('#FFF3E0', '#EF6C00'),
-  }
-
   def _build_svg(self):
-    """Swim-lane routing diagram (Dave's sample, 2026-07-22): one lane
-    per department (ALL lanes, always - spatial consistency), flow top
-    to bottom, nodes carry A01.01 codes. Redraws on every change."""
-    lanes = self._departments                     # sort_order = lane order
-    LW, NW, NH, VGAP, PAD = 140, 112, 40, 34, 8
-    # Header: big letter on top, then EACH WORD of the department name on
-    # its own line (Dave's format, 2026-07-22). Height fits the wordiest name.
-    max_words = max((len(d['department_name'].split()) for d in lanes),
-                    default=1)
-    HH = 24 + max_words * 13 + 5
-    width = len(lanes) * LW
-    lane_x = {d['department_id']: i for i, d in enumerate(lanes)}
-
-    if not self._steps:
-      return ('<div style="color:#999999;font-style:italic;padding:24px;'
-              'font-family:Arial;">Add steps to see the flow</div>')
-
-    codes = self._step_codes()
-    disp = {g: i + 1 for i, g in enumerate(sorted({s['seq'] for s in self._steps}))}
-    # group -> {lane_index: [(step, code), ...]}
-    groups = {}
-    for s, c in zip(self._steps, codes):
-      gd = disp[s['seq']]
-      li = lane_x.get(s['department_id'], 0)
-      groups.setdefault(gd, {}).setdefault(li, []).append((s, c))
-
-    body = []
-    # Lane headers + separators (heights fixed after we know total height)
-    y = HH + PAD
-    node_rows = []                                # per group: list of node dicts
-    for gd in sorted(groups.keys()):
-      lanes_here = groups[gd]
-      depth = max(len(v) for v in lanes_here.values())
-      nodes = []
-      for li, entries in lanes_here.items():
-        for k, (s, code) in enumerate(entries):
-          nx = li * LW + (LW - NW) / 2
-          ny = y + k * (NH + 6)
-          d = lanes[li]
-          fill, stroke = self._LANE_COLORS.get(d.get('dept_code') or '?',
-                                               ('#F5F5F5', '#616161'))
-          note = (s.get('step_notes') or '').strip()
-          if len(note) > 16:
-            note = note[:15] + '\u2026'
-          body.append(f'<rect x="{nx:.0f}" y="{ny:.0f}" width="{NW}" height="{NH}" '
-                      f'rx="8" fill="{fill}" stroke="{stroke}" stroke-width="1.5"/>')
-          body.append(f'<text x="{nx + NW/2:.0f}" y="{ny + 16:.0f}" font-size="12" '
-                      f'font-weight="bold" fill="#212121" text-anchor="middle">{code}</text>')
-          if note:
-            body.append(f'<text x="{nx + NW/2:.0f}" y="{ny + 31:.0f}" font-size="9" '
-                        f'fill="#595959" text-anchor="middle">{note}</text>')
-          nodes.append({'cx': nx + NW / 2, 'top': ny, 'bottom': ny + NH})
-      node_rows.append(nodes)
-      y += depth * (NH + 6) + VGAP
-    height = y + PAD
-
-    # Orthogonal arrows: every node in group i -> every node in group i+1
-    for i in range(len(node_rows) - 1):
-      for a in node_rows[i]:
-        for b in node_rows[i + 1]:
-          mid = b['top'] - 12
-          body.append(f'<polyline points="{a["cx"]:.0f},{a["bottom"]:.0f} '
-                      f'{a["cx"]:.0f},{mid:.0f} {b["cx"]:.0f},{mid:.0f} '
-                      f'{b["cx"]:.0f},{b["top"] - 2:.0f}" fill="none" '
-                      f'stroke="#666666" stroke-width="1.5" marker-end="url(#arw)"/>')
-
-    # Lanes: separators full height + colored headers with letter-name text
-    chrome = []
-    for i, d in enumerate(lanes):
-      x = i * LW
-      code = d.get('dept_code') or '?'
-      fill, stroke = self._LANE_COLORS.get(code, ('#F5F5F5', '#616161'))
-      chrome.append(f'<rect x="{x}" y="0" width="{LW}" height="{HH}" '
-                    f'fill="{fill}" stroke="#BBBBBB" stroke-width="1"/>')
-      # Header format: the letter alone on top (prominent), then each word
-      # of the department name on its own line beneath it - no truncation.
-      # The whole block is VERTICALLY CENTERED within the header band, so
-      # short names (Assemble) sit as neatly as long ones (Material Handling).
-      words = d['department_name'].split()
-      block = 17 + len(words) * 13          # letter line + word lines
-      y0 = (HH - block) / 2
-      chrome.append(f'<text x="{x + LW/2}" y="{y0 + 14:.0f}" font-size="15" '
-                    f'font-weight="bold" fill="{stroke}" text-anchor="middle">'
-                    f'{code}</text>')
-      for wi, word in enumerate(words):
-        chrome.append(f'<text x="{x + LW/2}" y="{y0 + 28 + wi * 13:.0f}" '
-                      f'font-size="11" font-weight="bold" fill="{stroke}" '
-                      f'text-anchor="middle">{word}</text>')
-      chrome.append(f'<line x1="{x}" y1="0" x2="{x}" y2="{height}" '
-                    f'stroke="#DDDDDD" stroke-width="1"/>')
-    chrome.append(f'<rect x="0" y="0" width="{width}" height="{height}" '
-                  f'fill="none" stroke="#BBBBBB" stroke-width="1.5"/>')
-
-    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
-           f'style="width:100%;font-family:Arial;">'
-           '<defs><marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" '
-           'markerWidth="6" markerHeight="6" orient="auto">'
-           '<path d="M0 0L10 5L0 10z" fill="#666666"/></marker></defs>'
-           + ''.join(chrome) + ''.join(body) + '</svg>')
-    # Div wrap: Anvil's HTML component sets className on the root element,
-    # and SVG roots expose className as READ-ONLY (browser TypeError).
-    return '<div>' + svg + '</div>'
+    from .. import routing_diagram
+    return routing_diagram.build_routing_svg(
+      self._departments, self._steps, self._dept_codes)
 
   # ===================================================================
   # Derived specials (§2.5) — suggestion, never substitution

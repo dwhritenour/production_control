@@ -189,6 +189,7 @@ components:
       - {data_key: '', expand: false, id: JKSDUP, title: WO#, width: '200'}
       - {data_key: column_1, id: OVZFKY, title: Plan, width: '100'}
       - {data_key: '', expand: false, id: VJQQOR, title: Status, width: '200'}
+      - {data_key: column_1, id: TQXVKL, title: Routing, width: '100'}
       - {data_key: '', id: OJLQEN, title: SO#, width: '120'}
       - {data_key: sales_order_line, id: JIXSRC, title: Line, width: '100'}
       - {data_key: part_number, id: NTNWAU, title: Part#, width: '160'}

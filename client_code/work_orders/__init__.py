@@ -53,6 +53,7 @@ class work_orders(work_ordersTemplate):
     self._plan_only = False
     self._add_plan_column()
     self._add_desc_column()
+    self._add_routing_column()
     self._wire_plan_filter()
     try:
       if 'Plan (position)' not in (self.dd_sort.items or []):
@@ -296,6 +297,37 @@ class work_orders(work_ordersTemplate):
       self.grid_work_orders.columns = cols
     except Exception:
       pass
+
+  # Column id the row template looks for when it adds its 'View' link.
+  # A designer-built column titled 'Routing' takes precedence (any id).
+  ROUTING_COL_ID = 'ROUTE0912'
+
+  def _add_routing_column(self):
+    """2026-09-12: a 'Routing' column right after Status. The cell holds a
+    'View' link (added by WorkOrdersRowTemplate) that pops the swim-lane
+    routing diagram for that work order. Code-added unless the designer
+    already has a column titled 'Routing'."""
+    try:
+      cols = list(self.grid_work_orders.columns or [])
+      if any((c.get('title') or '').strip().lower() == 'routing' for c in cols):
+        return
+      after = next((i for i, c in enumerate(cols)
+                    if (c.get('title') or '').strip().lower() == 'status'), 1)
+      cols.insert(after + 1, {'id': self.ROUTING_COL_ID, 'title': 'Routing',
+                              'data_key': '', 'width': '90'})
+      self.grid_work_orders.columns = cols
+    except Exception:
+      pass
+
+  def routing_column_id(self):
+    """Id of the Routing column (designer or code-added) for row templates."""
+    try:
+      for c in (self.grid_work_orders.columns or []):
+        if (c.get('title') or '').strip().lower() == 'routing':
+          return c.get('id')
+    except Exception:
+      pass
+    return None
 
   def _wire_plan_filter(self):
     if not hasattr(self, 'lk_plan_count'):
