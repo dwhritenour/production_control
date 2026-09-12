@@ -60,7 +60,7 @@ components:
   type: Label
 - layout_properties: {column: TQXVKL}
   name: lk_routing
-  properties: {}
+  properties: {align: center, icon: 'fa:eye'}
   type: Link
 container: {type: DataRowPanel}
 is_package: true
