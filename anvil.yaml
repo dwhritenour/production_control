@@ -1,8 +1,8 @@
 allow_embedding: false
 correct_dependency_ids: {}
 dependencies: []
-metadata: {description: 'Allows approval, rejecting and editing transfers.', title: Transfer Recommendations}
-name: Production Control
+metadata: {description: 'Allows approval, rejecting and editing transfers.', title: Production Control v1.0}
+name: Production Control v1.0
 package_name: Transfer_Dashboard
 renamed: true
 runtime_options:
