@@ -15,6 +15,15 @@ Uses centralized db_config for credentials (Anvil Secrets)
 Author: Dave Whritenour / Claude AI Assistant
 Project: Titan Flow Control - Year of Automation
 Created: February 2026
+
+2026-09-17 (wo-status-ownership DECISION step 4): when PC closes a work
+order administratively - Accept Orphans (bulk Verify -> Complete) or a
+single Cancel / Complete through update_work_order_status - every routing
+step still open on it (Pending / Ready / In Progress) is SKIPPED with a
+'Skip' event, so the routing never contradicts the work order again and
+no department queue keeps a phantom 'Ready' row for finished work. See
+_skip_open_routing_steps(). Skip is the routing engine's own PC idiom
+(record_step_event 'Skip', migration 007) - no new vocabulary.
 """
 
 import anvil.server
@@ -441,6 +450,61 @@ def log_wo_cancel(cursor, work_order_id, wo_number, so_number, so_rel,
   """, (work_order_id, wo_number, so_number, so_rel, source, old_status, actor))
 
 
+def _skip_open_routing_steps(cursor, actor, note, work_order_id=None,
+                             statuses=None):
+  """
+    Close out routing that a WO-level close leaves behind: every step still
+    Pending / Ready / In Progress goes to 'Skipped' and gets a 'Skip' event
+    (event_by = actor, notes = note). Set-based: ONE work order
+    (work_order_id) or every WO currently in `statuses`.
+
+    Why: Accept Orphans completed 1,414 WOs on 2026-09-10 and nine of them
+    still had open routing (Inspection never happened); by 09-17 the same
+    gap had grown to ~200 finished WOs whose 'Ready' steps sat in
+    department queues as phantom work. Status and routing are one fact
+    with one owner (wo-status-ownership) - when PC closes the WO, PC
+    closes the routing.
+
+    Skip is the routing engine's existing PC-only idiom (record_step_event
+    'Skip'); out_of_sequence stays 0 - an administrative close is not a
+    floor sequencing error. Returns (steps_skipped, wos_touched).
+  """
+  if work_order_id is None and not statuses:
+    return 0, 0
+  if work_order_id is not None:
+    scope = "wo.work_order_id = %s"
+    params = (work_order_id,)
+  else:
+    scope = "wo.status IN (" + ", ".join(["%s"] * len(statuses)) + ")"
+    params = tuple(statuses)
+
+  cursor.execute(f"""
+      SELECT s.wo_step_id, s.work_order_id
+      FROM dbo.pc_wo_routing_steps s
+      JOIN dbo.work_orders wo ON wo.work_order_id = s.work_order_id
+      WHERE {scope}
+        AND s.status NOT IN ('Complete', 'Skipped')
+  """, params)
+  targets = cursor.fetchall()
+  if not targets:
+    return 0, 0
+
+  for t in targets:
+    cursor.execute("""
+        INSERT INTO dbo.pc_wo_routing_step_events
+            (wo_step_id, work_order_id, event_type, qty,
+             out_of_sequence, event_by, notes)
+        VALUES (%s, %s, 'Skip', NULL, 0, %s, %s)
+    """, (t['wo_step_id'], t['work_order_id'], actor, note))
+    cursor.execute("""
+        UPDATE dbo.pc_wo_routing_steps
+        SET status = 'Skipped'
+        WHERE wo_step_id = %s AND status NOT IN ('Complete', 'Skipped')
+    """, (t['wo_step_id'],))
+
+  return len(targets), len({t['work_order_id'] for t in targets})
+
+
 @anvil.server.callable
 def update_work_order_status(work_order_id, new_status, completed_by=None):
   """
@@ -499,9 +563,18 @@ def update_work_order_status(work_order_id, new_status, completed_by=None):
       except Exception:
         pass
 
+    # A WO closed here (Cancel, or an office Complete) takes its routing
+    # with it: open steps are Skipped in the same transaction (step 4).
+    steps_skipped = 0
+    if new_status in ('Complete', 'Cancelled'):
+      steps_skipped, _ = _skip_open_routing_steps(
+        cursor, completed_by or _current_actor() or 'Production',
+        f'PC {new_status.lower()} - routing closed with the work order',
+        work_order_id=work_order_id)
+
     conn.commit()
     conn.close()
-    return {'status': 'success'}
+    return {'status': 'success', 'routing_steps_skipped': steps_skipped}
 
   except Exception as e:
     return {'status': 'error', 'message': str(e)}
@@ -757,9 +830,15 @@ def bulk_acknowledge_verify_work_orders(acknowledged_by='Production'):
     1. Mark all unacknowledged changes as reviewed
     2. Reset pending_change_count to 0
     3. Advance Verify statuses to Complete (Cancelled stays Cancelled)
+    4. (2026-09-17, wo-status-ownership step 4) Skip every routing step
+       still open on the WOs just closed - Verify->Complete AND Cancelled -
+       so no department queue keeps a phantom 'Ready' row for finished
+       work and status never contradicts routing. One 'Skip' event per
+       step, note 'Accept Orphans - routing closed with the work order'.
 
   Returns:
-    dict with status, count of acknowledged WOs, and breakdown by status
+    dict with status, count of acknowledged WOs, breakdown by status,
+    routing_steps_skipped, routing_wos_touched
   """
   target_statuses = (
     'Shipped - Verify', 'Invoiced - Verify', 'Closed - Verify', 'Cancelled'
@@ -807,6 +886,14 @@ def bulk_acknowledge_verify_work_orders(acknowledged_by='Production'):
       WHERE status IN ('Shipped - Verify', 'Invoiced - Verify', 'Closed - Verify', 'Cancelled')
     """)
 
+    # 4. Close the routing the close-out leaves behind - BEFORE step 3
+    #    flips the statuses, while the target rows are still identifiable
+    #    by their Verify / Cancelled status. Same transaction.
+    steps_skipped, wos_touched = _skip_open_routing_steps(
+      cursor, acknowledged_by,
+      'Accept Orphans - routing closed with the work order',
+      statuses=target_statuses)
+
     # 3. Advance Verify statuses to Complete (Cancelled stays as-is)
     cursor.execute("""
       UPDATE dbo.work_orders
@@ -822,11 +909,16 @@ def bulk_acknowledge_verify_work_orders(acknowledged_by='Production'):
     # Build summary message
     parts = [f"{cnt} {status}" for status, cnt in breakdown.items()]
     detail = ", ".join(parts)
+    if steps_skipped:
+      detail += (f"; skipped {steps_skipped} open routing step"
+                 f"{'s' if steps_skipped != 1 else ''} on {wos_touched} of them")
 
     return {
       'status': 'success',
       'acknowledged': total,
       'breakdown': breakdown,
+      'routing_steps_skipped': steps_skipped,
+      'routing_wos_touched': wos_touched,
       'message': f"Acknowledged {total} orphaned work orders ({detail})"
     }
 
