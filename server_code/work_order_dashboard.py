@@ -21,9 +21,14 @@ order administratively - Accept Orphans (bulk Verify -> Complete) or a
 single Cancel / Complete through update_work_order_status - every routing
 step still open on it (Pending / Ready / In Progress) is SKIPPED with a
 'Skip' event, so the routing never contradicts the work order again and
-no department queue keeps a phantom 'Ready' row for finished work. See
-_skip_open_routing_steps(). Skip is the routing engine's own PC idiom
-(record_step_event 'Skip', migration 007) - no new vocabulary.
+no department queue keeps a phantom 'Ready' row for finished work. Skip
+is the routing engine's own PC idiom (record_step_event 'Skip',
+migration 007) - no new vocabulary.
+2026-09-23: that work moved INTO THE DATABASE - dbo.sp_pc_accept_orphans
+(the whole bulk close-out) and dbo.sp_pc_close_wo_routing (one WO),
+migration 084. The 09-17 version looped in Python, two statements per open
+step; on 09-23 Accept Orphans hit 228 open steps (~456 round trips) and
+died on Anvil's 30 s call limit. Each caller is now ONE EXEC.
 """
 
 import anvil.server
@@ -450,61 +455,6 @@ def log_wo_cancel(cursor, work_order_id, wo_number, so_number, so_rel,
   """, (work_order_id, wo_number, so_number, so_rel, source, old_status, actor))
 
 
-def _skip_open_routing_steps(cursor, actor, note, work_order_id=None,
-                             statuses=None):
-  """
-    Close out routing that a WO-level close leaves behind: every step still
-    Pending / Ready / In Progress goes to 'Skipped' and gets a 'Skip' event
-    (event_by = actor, notes = note). Set-based: ONE work order
-    (work_order_id) or every WO currently in `statuses`.
-
-    Why: Accept Orphans completed 1,414 WOs on 2026-09-10 and nine of them
-    still had open routing (Inspection never happened); by 09-17 the same
-    gap had grown to ~200 finished WOs whose 'Ready' steps sat in
-    department queues as phantom work. Status and routing are one fact
-    with one owner (wo-status-ownership) - when PC closes the WO, PC
-    closes the routing.
-
-    Skip is the routing engine's existing PC-only idiom (record_step_event
-    'Skip'); out_of_sequence stays 0 - an administrative close is not a
-    floor sequencing error. Returns (steps_skipped, wos_touched).
-  """
-  if work_order_id is None and not statuses:
-    return 0, 0
-  if work_order_id is not None:
-    scope = "wo.work_order_id = %s"
-    params = (work_order_id,)
-  else:
-    scope = "wo.status IN (" + ", ".join(["%s"] * len(statuses)) + ")"
-    params = tuple(statuses)
-
-  cursor.execute(f"""
-      SELECT s.wo_step_id, s.work_order_id
-      FROM dbo.pc_wo_routing_steps s
-      JOIN dbo.work_orders wo ON wo.work_order_id = s.work_order_id
-      WHERE {scope}
-        AND s.status NOT IN ('Complete', 'Skipped')
-  """, params)
-  targets = cursor.fetchall()
-  if not targets:
-    return 0, 0
-
-  for t in targets:
-    cursor.execute("""
-        INSERT INTO dbo.pc_wo_routing_step_events
-            (wo_step_id, work_order_id, event_type, qty,
-             out_of_sequence, event_by, notes)
-        VALUES (%s, %s, 'Skip', NULL, 0, %s, %s)
-    """, (t['wo_step_id'], t['work_order_id'], actor, note))
-    cursor.execute("""
-        UPDATE dbo.pc_wo_routing_steps
-        SET status = 'Skipped'
-        WHERE wo_step_id = %s AND status NOT IN ('Complete', 'Skipped')
-    """, (t['wo_step_id'],))
-
-  return len(targets), len({t['work_order_id'] for t in targets})
-
-
 @anvil.server.callable
 def update_work_order_status(work_order_id, new_status, completed_by=None):
   """
@@ -564,13 +514,22 @@ def update_work_order_status(work_order_id, new_status, completed_by=None):
         pass
 
     # A WO closed here (Cancel, or an office Complete) takes its routing
-    # with it: open steps are Skipped in the same transaction (step 4).
+    # with it: open steps are Skipped in the same transaction (step 4) -
+    # one round trip, dbo.sp_pc_close_wo_routing (migration 084).
     steps_skipped = 0
     if new_status in ('Complete', 'Cancelled'):
-      steps_skipped, _ = _skip_open_routing_steps(
-        cursor, completed_by or _current_actor() or 'Production',
-        f'PC {new_status.lower()} - routing closed with the work order',
-        work_order_id=work_order_id)
+      cursor.execute("""
+          EXEC dbo.sp_pc_close_wo_routing @work_order_id=%s, @actor=%s, @note=%s
+      """, (work_order_id,
+            (completed_by or _current_actor() or 'Production')[:50],
+            f'PC {new_status.lower()} - routing closed with the work order'))
+      proc = cursor.fetchone() or {}
+      if proc.get('status') != 'success':
+        conn.rollback()
+        conn.close()
+        return {'status': 'error',
+                'message': proc.get('message', 'Routing close-out failed')}
+      steps_skipped = int(proc.get('steps_skipped') or 0)
 
     conn.commit()
     conn.close()
@@ -826,85 +785,54 @@ def bulk_acknowledge_verify_work_orders(acknowledged_by='Production'):
   change detection creates orphaned WOs in Shipped/Invoiced/Closed-Verify
   or Cancelled. This bulk-clears them so the team can focus on real work orders.
 
-  Steps per WO:
-    1. Mark all unacknowledged changes as reviewed
-    2. Reset pending_change_count to 0
-    3. Advance Verify statuses to Complete (Cancelled stays Cancelled)
-    4. (2026-09-17, wo-status-ownership step 4) Skip every routing step
-       still open on the WOs just closed - Verify->Complete AND Cancelled -
-       so no department queue keeps a phantom 'Ready' row for finished
-       work and status never contradicts routing. One 'Skip' event per
-       step, note 'Accept Orphans - routing closed with the work order'.
+  2026-09-23: the work is done by dbo.sp_pc_accept_orphans (migration 084)
+  in ONE call and ONE transaction - acknowledge pending changes, zero the
+  counters, Skip every open routing step on the target WOs (wo-status-
+  ownership step 4), advance the Verify statuses to Complete (Cancelled
+  stays Cancelled). The 09-17 Python version looped per open step and hit
+  Anvil's 30 s server-call limit once the orphan set grew (1,145 WOs / 228
+  open steps on 09-23); a timeout is not a caught SQL error, so the form
+  crashed. Now the volume is the database's problem, not the call's.
 
   Returns:
     dict with status, count of acknowledged WOs, breakdown by status,
     routing_steps_skipped, routing_wos_touched
   """
-  target_statuses = (
-    'Shipped - Verify', 'Invoiced - Verify', 'Closed - Verify', 'Cancelled'
-  )
-
   try:
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Count by status for reporting
-    cursor.execute("""
-      SELECT status, COUNT(*) AS cnt
-      FROM dbo.work_orders
-      WHERE status IN ('Shipped - Verify', 'Invoiced - Verify', 'Closed - Verify', 'Cancelled')
-      GROUP BY status
-    """)
-    breakdown = {row['status']: row['cnt'] for row in cursor.fetchall()}
-    total = sum(breakdown.values())
+    cursor.execute("EXEC dbo.sp_pc_accept_orphans @acknowledged_by=%s",
+                   ((acknowledged_by or 'Production')[:50],))
+    proc = cursor.fetchone() or {}
+    if proc.get('status') != 'success':
+      conn.rollback()
+      conn.close()
+      return {'status': 'error',
+              'message': proc.get('message', 'Accept Orphans failed')}
+
+    conn.commit()
+    conn.close()
+
+    breakdown = {label: int(proc.get(key) or 0)
+                 for label, key in (('Shipped - Verify', 'shipped_verify'),
+                                    ('Invoiced - Verify', 'invoiced_verify'),
+                                    ('Closed - Verify', 'closed_verify'),
+                                    ('Cancelled', 'cancelled'))
+                 if int(proc.get(key) or 0) > 0}
+    total = int(proc.get('acknowledged') or 0)
+    steps_skipped = int(proc.get('routing_steps_skipped') or 0)
+    wos_touched = int(proc.get('routing_wos_touched') or 0)
 
     if total == 0:
-      conn.close()
       return {
         'status': 'success',
         'acknowledged': 0,
         'breakdown': {},
-        'message': 'No work orders in Verify or Cancelled status'
+        'routing_steps_skipped': 0,
+        'routing_wos_touched': 0,
+        'message': proc.get('message') or 'No work orders in Verify or Cancelled status'
       }
-
-    # 1. Mark all unacknowledged changes on these WOs as reviewed
-    cursor.execute("""
-      UPDATE wc
-      SET wc.acknowledged_at = GETDATE(),
-          wc.acknowledged_by = %s
-      FROM dbo.work_order_changes wc
-      INNER JOIN dbo.work_orders wo
-        ON wc.work_order_id = wo.work_order_id
-      WHERE wo.status IN ('Shipped - Verify', 'Invoiced - Verify', 'Closed - Verify', 'Cancelled')
-        AND wc.acknowledged_at IS NULL
-    """, (acknowledged_by,))
-
-    # 2. Reset pending_change_count
-    cursor.execute("""
-      UPDATE dbo.work_orders
-      SET pending_change_count = 0
-      WHERE status IN ('Shipped - Verify', 'Invoiced - Verify', 'Closed - Verify', 'Cancelled')
-    """)
-
-    # 4. Close the routing the close-out leaves behind - BEFORE step 3
-    #    flips the statuses, while the target rows are still identifiable
-    #    by their Verify / Cancelled status. Same transaction.
-    steps_skipped, wos_touched = _skip_open_routing_steps(
-      cursor, acknowledged_by,
-      'Accept Orphans - routing closed with the work order',
-      statuses=target_statuses)
-
-    # 3. Advance Verify statuses to Complete (Cancelled stays as-is)
-    cursor.execute("""
-      UPDATE dbo.work_orders
-      SET status = 'Complete',
-          completed_at = GETDATE(),
-          completed_by = %s
-      WHERE status IN ('Shipped - Verify', 'Invoiced - Verify', 'Closed - Verify')
-    """, (acknowledged_by,))
-
-    conn.commit()
-    conn.close()
 
     # Build summary message
     parts = [f"{cnt} {status}" for status, cnt in breakdown.items()]
