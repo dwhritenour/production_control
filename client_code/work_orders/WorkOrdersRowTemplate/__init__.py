@@ -100,14 +100,20 @@ class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
     self.tb_override_qty.text = str(int(override)) if override is not None else ''
     self.tb_override_qty.enabled = (status != 'Complete')
 
-    # ---- Notes -- click to see full text ---------------------------------
-    notes = self.item.get('notes', '') or ''
-    if len(notes) > 40:
-      self.link_notes.text = notes[:40] + '...'
+    # ---- Notes -- preview in the grid, full text fetched on click ---------
+    # 2026-09-24 (performance): the grid no longer carries the notes text
+    # (three varchar(max) columns x thousands of rows = most of a 4 MB
+    # payload). The server sends has_notes + a 60-char notes_preview; the
+    # click calls get_wo_notes for the full SKU / SO notes. Falls back to
+    # the old inline 'notes' key if an older server module is deployed.
+    preview = (self.item.get('notes_preview') or self.item.get('notes') or '').strip()
+    has_notes = bool(self.item.get('has_notes')) or bool(preview)
+    if len(preview) > 40:
+      self.link_notes.text = preview[:40] + '...'
     else:
-      self.link_notes.text = notes
-    if notes:
-      self.link_notes.set_event_handler('click', lambda **e: alert(notes, title="Notes"))
+      self.link_notes.text = preview or ('Notes' if has_notes else '')
+    if has_notes:
+      self.link_notes.set_event_handler('click', self.show_notes)
 
     # ---- WO# / SO# links -------------------------------------------------
     self.link_wo_number.text = self.item.get('work_order_number', '')
@@ -220,6 +226,26 @@ class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
   # =========================================================================
   # POPUPS
   # =========================================================================
+  def show_notes(self, **event_args):
+    """Full SKU + sales-order notes for this WO (one small call)."""
+    result = anvil.server.call('get_wo_notes', self.item['work_order_id'])
+    if result.get('status') != 'success':
+      alert(f"Error: {result.get('message', 'Unknown error')}")
+      return
+    panel = ColumnPanel()
+    sku = (result.get('so_notes') or result.get('notes') or '').strip()
+    so = (result.get('so_level_notes') or '').strip()
+    if sku:
+      panel.add_component(Label(text='SKU Notes', bold=True))
+      panel.add_component(Label(text=sku, foreground='#333333'))
+    if so:
+      panel.add_component(Label(text='Sales Order Notes', bold=True))
+      panel.add_component(Label(text=so, foreground='#333333'))
+    if not sku and not so:
+      panel.add_component(Label(text='(no notes)', italic=True))
+    alert(content=panel, title=f"Notes - {self.item.get('work_order_number', '')}",
+          large=True, buttons=[("Close", None)])
+
   def show_backorder_detail(self, **event_args):
     """Open sales backorder detail as a popup dialog."""
     from ..SalesBackorderDetail import SalesBackorderDetail

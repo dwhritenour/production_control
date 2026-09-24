@@ -235,10 +235,10 @@ components:
       - {data_key: '', expand: false, id: VJQQOR, title: Status, width: '190'}
       - {data_key: '', id: OJLQEN, title: SO#, width: '105'}
       - {data_key: '', id: NTNWAU, title: Part Number / Description, width: '180'}
-      - {data_key: '', id: CFDXLR, title: SO Qty, width: '65'}
+      - {data_key: '', expand: false, id: CFDXLR, title: SO Qty, width: 55}
       - {data_key: '', id: EXQTUZ, title: New Qty, width: '75'}
-      - {data_key: '', expand: false, id: PBWTKO, title: WO Due Date, width: '130'}
-      - {data_key: '', id: SVOJTH, title: SO Due Date, width: '100'}
+      - {data_key: '', expand: false, id: PBWTKO, title: WO Due Date, width: '135'}
+      - {data_key: '', id: SVOJTH, title: SO Due Date, width: '120'}
       margin: [null, '0', '4', '0']
       role: [horizontal-scroll, tonal-data-grid]
       rows_per_page: 20

@@ -56,6 +56,17 @@ class WorkOrderDetail(WorkOrderDetailTemplate):
       f"|  SO {so_num}-{rel}{plan_bit}"
     )
 
+    # 2026-09-24 (performance): notes are no longer on the grid row - one
+    # small call fetches them when the popup opens. Falls back to the old
+    # inline keys if an older server module is deployed.
+    if 'so_notes' not in item and 'so_level_notes' not in item:
+      try:
+        _n = anvil.server.call('get_wo_notes', item.get('work_order_id'))
+        if _n.get('status') == 'success':
+          item['so_notes'] = _n.get('so_notes') or ''
+          item['so_level_notes'] = _n.get('so_level_notes') or ''
+      except Exception:
+        pass
     sku_level_notes = item.get('so_notes', '') or 'No SKU notes'
     # 058: the SO line description first - for non-stock lines it IS the spec
     _desc = (item.get('sku_desc') or '').strip()

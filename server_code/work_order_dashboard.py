@@ -24,6 +24,17 @@ step still open on it (Pending / Ready / In Progress) is SKIPPED with a
 no department queue keeps a phantom 'Ready' row for finished work. Skip
 is the routing engine's own PC idiom (record_step_event 'Skip',
 migration 007) - no new vocabulary.
+2026-09-24 PERFORMANCE (perf_probe measured the office grid at 3.6 s
+server-side: 0.7 s connection, 0.9 s SQL across 7 statements, 2.0 s pulling
+a 4 MB result set - 1.6 KB per row, almost all of it the three varchar(max)
+notes columns nobody reads until they click):
+  - NOTES ON DEMAND: get_work_orders ships has_notes + a 60-char preview;
+    the full SKU / SO notes come from get_wo_notes(work_order_id) when the
+    Notes link or the detail popup opens (the SE app has done it this way
+    since June).
+  - Column probes (plan / sku_desc) cached per server process instead of
+    two round trips per call; the three scalar count queries collapsed into
+    one statement. 7 statements -> 4.
 2026-09-23: that work moved INTO THE DATABASE - dbo.sp_pc_accept_orphans
 (the whole bulk close-out) and dbo.sp_pc_close_wo_routing (one WO),
 migration 084. The 09-17 version looped in Python, two statements per open
@@ -91,19 +102,29 @@ _WO_TERMINAL = ('Complete', 'Cancelled', 'Closed - Verify',
                 'Shipped - Verify', 'Invoiced - Verify')
 
 
+# Column probes are answered ONCE per server process (2026-09-24): the
+# answer cannot change under a running process except by a migration, and
+# each probe was a 60-70 ms round trip on every grid load.
+_COLUMN_CACHE = {}
+
+
+def _has_column(cursor, table, column):
+  key = (table, column)
+  if key not in _COLUMN_CACHE:
+    cursor.execute("SELECT COL_LENGTH(%s, %s) AS c", (table, column))
+    row = cursor.fetchone()
+    _COLUMN_CACHE[key] = bool(row and row.get('c') is not None)
+  return _COLUMN_CACHE[key]
+
+
 def _has_plan_columns(cursor):
   """True once 056 is applied. Lets this module be pasted before the
   migration runs without breaking the grid."""
-  cursor.execute("SELECT COL_LENGTH('dbo.work_orders', 'plan_date') AS c")
-  row = cursor.fetchone()
-  return bool(row and row.get('c') is not None)
+  return _has_column(cursor, 'dbo.work_orders', 'plan_date')
 
 
-def _has_desc_column(cursor):
-  """True once 058 (work_orders.sku_desc) is applied."""
-  cursor.execute("SELECT COL_LENGTH('dbo.work_orders', 'sku_desc') AS c")
-  row = cursor.fetchone()
-  return bool(row and row.get('c') is not None)
+def _has_desc_column(cursor):  # 058; cached per process (see _has_column)
+  return _has_column(cursor, 'dbo.work_orders', 'sku_desc')
 
 
 def _plan_label(tier, position, plan_date_str, on_today):
@@ -191,7 +212,6 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
             wo.attribute_desc,
             wo.quantity,
             wo.wo_override_qty,
-            wo.notes,
             wo.due_date,
             wo.status,
             wo.created_at,
@@ -202,8 +222,12 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
             wo.pending_change_count,
             wo.last_change_detected_at,
             wo.wo_due_date,
-            COALESCE(so.nx_notes, wo.notes)              AS so_notes,
-            COALESCE(so.nx_so_notes, wo.so_notes)        AS so_level_notes, 
+            CASE WHEN (wo.notes IS NOT NULL AND LTRIM(RTRIM(CAST(wo.notes AS varchar(200)))) <> '')
+                   OR (so.nx_notes IS NOT NULL AND LTRIM(RTRIM(CAST(so.nx_notes AS varchar(200)))) <> '')
+                   OR (wo.so_notes IS NOT NULL AND LTRIM(RTRIM(CAST(wo.so_notes AS varchar(200)))) <> '')
+                   OR (so.nx_so_notes IS NOT NULL AND LTRIM(RTRIM(CAST(so.nx_so_notes AS varchar(200)))) <> '')
+                 THEN 1 ELSE 0 END                       AS has_notes,
+            LEFT(CAST(COALESCE(so.nx_notes, wo.notes, so.nx_so_notes, wo.so_notes) AS varchar(200)), 60) AS notes_preview,
             COALESCE(so.nx_attrib_val, wo.attribute_value) AS so_attrib_val,
             {desc_col}
             CASE WHEN so.nx_part_status = 'N' THEN 1 ELSE 0 END AS is_nonstock,
@@ -350,6 +374,11 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
                                              serialized.get('plan_date'),
                                              serialized['on_todays_plan'])
 
+      # Notes on demand (2026-09-24): the grid carries a flag + preview only;
+      # get_wo_notes() fetches the text when someone opens it.
+      serialized['has_notes'] = int(serialized.get('has_notes') or 0)
+      serialized['notes_preview'] = (serialized.get('notes_preview') or '').strip()
+
       # Carrier / MOS / rush flag (Carrier+MOS+Rush feature)
       serialized['nx_carrier'] = (serialized.get('nx_carrier') or '').strip()
       serialized['nx_mos']     = (serialized.get('nx_mos') or '').strip()
@@ -367,45 +396,39 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
     """)
     counts = {row['status']: row['cnt'] for row in cursor.fetchall()}
 
-    cursor.execute("""
-        SELECT COUNT(*) AS cnt
-        FROM dbo.work_orders
-        WHERE pending_change_count > 0
-          AND status NOT IN ('Complete')
-    """)
-    row = cursor.fetchone()
-    counts['PendingChanges'] = row['cnt'] if row else 0
-
-    # Rush count: live-status work orders whose linked SO is a rush ship method.
-    cursor.execute(f"""
-        SELECT COUNT(*) AS cnt
-        FROM dbo.work_orders wo
-        LEFT JOIN dbo.sales_orders_due so
-            ON wo.sales_order_number = so.nx_order_numb
-           AND CAST(wo.sales_order_line AS VARCHAR) = so.nx_item_no
-           AND wo.sales_order_rel = so.nx_rel_numb
-        WHERE wo.status IN ('Created', 'Released', 'Assigned', 'In Progress', 'Paused')
-          AND {_sod._rush_bool_sql('so.')}
-    """)
-    _rr = cursor.fetchone()
-    counts['rush'] = _rr['cnt'] if _rr else 0
-
-    # 056: today's plan — how many work orders, how many already released
-    # (anything past 'Created'). Drives the 'Plan: 12/42 released' chip.
-    counts['plan_today'] = 0
-    counts['plan_released'] = 0
+    # One statement for the three scalar counts (2026-09-24; was three
+    # round trips): pending changes, rush, today's plan.
+    plan_sql = "0 AS plan_today, 0 AS plan_released"
+    plan_params = ()
     if has_plan:
-      cursor.execute(f"""
-          SELECT COUNT(*) AS cnt,
-                 SUM(CASE WHEN status <> 'Created' THEN 1 ELSE 0 END) AS released
-          FROM dbo.work_orders
-          WHERE plan_date = CAST(GETDATE() AS DATE)
-            AND status NOT IN ({", ".join(["%s"] * len(_WO_TERMINAL))})
-      """, _WO_TERMINAL)
-      _pr = cursor.fetchone()
-      if _pr:
-        counts['plan_today'] = _pr['cnt'] or 0
-        counts['plan_released'] = _pr['released'] or 0
+      plan_sql = f"""
+            (SELECT COUNT(*) FROM dbo.work_orders
+              WHERE plan_date = CAST(GETDATE() AS DATE)
+                AND status NOT IN ({", ".join(["%s"] * len(_WO_TERMINAL))})) AS plan_today,
+            (SELECT COUNT(*) FROM dbo.work_orders
+              WHERE plan_date = CAST(GETDATE() AS DATE)
+                AND status <> 'Created'
+                AND status NOT IN ({", ".join(["%s"] * len(_WO_TERMINAL))})) AS plan_released"""
+      plan_params = _WO_TERMINAL + _WO_TERMINAL
+    cursor.execute(f"""
+        SELECT
+            (SELECT COUNT(*) FROM dbo.work_orders
+              WHERE pending_change_count > 0 AND status NOT IN ('Complete')) AS pending_changes,
+            (SELECT COUNT(*)
+               FROM dbo.work_orders wo
+               LEFT JOIN dbo.sales_orders_due so
+                 ON wo.sales_order_number = so.nx_order_numb
+                AND CAST(wo.sales_order_line AS VARCHAR) = so.nx_item_no
+                AND wo.sales_order_rel = so.nx_rel_numb
+              WHERE wo.status IN ('Created', 'Released', 'Assigned', 'In Progress', 'Paused')
+                AND {_sod._rush_bool_sql('so.')}) AS rush,
+            {plan_sql}
+    """, plan_params)
+    _sc = cursor.fetchone() or {}
+    counts['PendingChanges'] = _sc.get('pending_changes') or 0
+    counts['rush'] = _sc.get('rush') or 0
+    counts['plan_today'] = _sc.get('plan_today') or 0
+    counts['plan_released'] = _sc.get('plan_released') or 0
 
     conn.close()
 
@@ -423,6 +446,49 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
       'work_orders': [],
       'counts': {}
     }
+
+
+# =============================================================================
+# GET WORK ORDER NOTES  (on demand - 2026-09-24)
+# =============================================================================
+
+@anvil.server.callable
+@perf_probe.timed
+def get_wo_notes(work_order_id):
+  """
+    The full notes for ONE work order, fetched when the Notes link or the
+    detail popup opens. Same three values the grid used to carry on every
+    row (wo.notes, SKU-level and SO-level notes with the live SO line
+    winning over the stored copy), now one small call per click instead
+    of ~1.6 KB x thousands of rows per grid load.
+
+    Returns:
+        {'status': 'success', 'notes', 'so_notes', 'so_level_notes'} or error
+  """
+  try:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT wo.notes,
+               COALESCE(so.nx_notes, wo.notes)       AS so_notes,
+               COALESCE(so.nx_so_notes, wo.so_notes) AS so_level_notes
+        FROM dbo.work_orders wo
+        LEFT JOIN dbo.sales_orders_due so
+          ON wo.sales_order_number = so.nx_order_numb
+         AND CAST(wo.sales_order_line AS VARCHAR) = so.nx_item_no
+         AND wo.sales_order_rel = so.nx_rel_numb
+        WHERE wo.work_order_id = %s
+    """, (work_order_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+      return {'status': 'error', 'message': 'Work order not found'}
+    return {'status': 'success',
+            'notes': make_serializable(row.get('notes')) or '',
+            'so_notes': make_serializable(row.get('so_notes')) or '',
+            'so_level_notes': make_serializable(row.get('so_level_notes')) or ''}
+  except Exception as e:
+    return {'status': 'error', 'message': str(e)}
 
 
 # =============================================================================
