@@ -239,9 +239,9 @@ components:
       - {data_key: '', id: EXQTUZ, title: New Qty, width: '75'}
       - {data_key: '', expand: false, id: PBWTKO, title: WO Due Date, width: '130'}
       - {data_key: '', id: SVOJTH, title: SO Due Date, width: '100'}
-      margin: [null, '0', null, '0']
+      margin: [null, '0', '4', '0']
       role: [horizontal-scroll, tonal-data-grid]
-      rows_per_page: 15
+      rows_per_page: 20
       show_page_controls: false
     type: DataGrid
   layout_properties: {slot: default}

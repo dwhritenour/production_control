@@ -125,6 +125,7 @@ from io import BytesIO
 
 # Import centralized configuration
 from . import db_config
+from . import perf_probe   # 2026-09-24 timing probe - remove with perf_probe.py
 
 
 # =============================================================================
@@ -271,6 +272,7 @@ def _view_mode_predicate(view_mode, custom_start=None, custom_end=None):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_sales_orders_due(view_mode='Late + Next 7 Days',
                          status_filter=None,
                          search_text=None,
@@ -504,6 +506,7 @@ def get_sales_orders_due(view_mode='Late + Next 7 Days',
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_sales_orders_due_stats():
   """Return summary counts only — unchanged from v5.15.0."""
   try:
@@ -558,6 +561,7 @@ def get_sales_orders_due_stats():
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_sales_order_line_detail(order_numb, rel_numb, item_no):
   """Single-line lookup with full notes, joined inventory snapshot for
   BOTH cost centers, and any active work order."""
@@ -663,6 +667,7 @@ _EXPORT_COLUMNS = [
 
 
 @anvil.server.callable
+@perf_probe.timed
 def export_sales_orders_due_excel(filters=None):
   """Re-runs the same filtered query as get_sales_orders_due, then writes
   an .xlsx via openpyxl with a frozen header row, autofilter, conditional

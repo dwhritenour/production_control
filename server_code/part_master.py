@@ -28,6 +28,7 @@ from decimal import Decimal
 
 # Import centralized configuration
 from . import db_config
+from . import perf_probe   # 2026-09-24 timing probe - remove with perf_probe.py
 
 
 # =============================================================================
@@ -99,6 +100,7 @@ def _norm_attrib(v):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def search_part_master(term):
   """
     SKU autocomplete for the Routing Library. Matches sku OR description.
@@ -125,6 +127,7 @@ def search_part_master(term):
 
 
 @anvil.server.callable
+@perf_probe.timed
 def get_part_detail(sku):
   """
     Full detail for one SKU + whether it has an active default routing.
@@ -167,6 +170,7 @@ def get_part_detail(sku):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def create_pc_sku(payload, actor=None):
   """
     Mint a PC-created SKU (New SKU dialog).
@@ -241,6 +245,7 @@ def create_pc_sku(payload, actor=None):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_so_all_notes(sales_order_number, sales_order_rel):
   """
     Every note on a sales order: header notes (nx_so_notes) once, then
@@ -297,6 +302,7 @@ EDITABLE_FIELDS = ('part_desc', 'line', 'series', 'model', 'body_mat',
 
 
 @anvil.server.callable
+@perf_probe.timed
 def list_pc_skus(search=None, include_inactive=False, unexported_only=False):
   """
     PC-created SKUs for the Part Master Manager grid (TOP 200, newest
@@ -331,6 +337,7 @@ def list_pc_skus(search=None, include_inactive=False, unexported_only=False):
 
 
 @anvil.server.callable
+@perf_probe.timed
 def update_pc_sku(sku, fields, actor=None):
   """
     Edit a PC-created SKU's descriptive fields (whitelist above).
@@ -372,6 +379,7 @@ def update_pc_sku(sku, fields, actor=None):
 
 
 @anvil.server.callable
+@perf_probe.timed
 def set_pc_sku_active(sku, active, actor=None):
   """
     Soft retire / reinstate a PC SKU. Inactive SKUs drop out of

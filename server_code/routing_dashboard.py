@@ -35,6 +35,7 @@ from decimal import Decimal
 
 # Import centralized configuration
 from . import db_config
+from . import perf_probe   # 2026-09-24 timing probe - remove with perf_probe.py
 
 
 # Step statuses (CK_pc_wo_routing_steps_status)
@@ -112,6 +113,7 @@ def _norm_attrib(v):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_departments():
   """
     Active departments for the routing editor dropdown.
@@ -138,6 +140,7 @@ def get_departments():
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_routing_for_release(work_order_id):
   """
     Everything the routing editor needs when a Release is initiated.
@@ -256,6 +259,7 @@ def get_routing_for_release(work_order_id):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_so_created_work_orders(sales_order_number, sales_order_rel):
   """
     'Created' work orders on a sales order, for the packet-release routing
@@ -288,6 +292,7 @@ def get_so_created_work_orders(sales_order_number, sales_order_rel):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def save_wo_routing(work_order_id, steps, actor=None):
   """
     Persist the routing snapshot for a work order (called by the editor's
@@ -425,6 +430,7 @@ def save_wo_routing(work_order_id, steps, actor=None):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def save_routing_template(part_number, steps, actor=None):
   """
     Upsert the default (NULL-attribute) routing template for a part.
@@ -495,6 +501,7 @@ def save_routing_template(part_number, steps, actor=None):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_wo_routing(work_order_id):
   """
     Routing steps + progress for the read-only status panel.
@@ -545,6 +552,7 @@ def get_wo_routing(work_order_id):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def record_step_event(wo_step_id, event_type, qty=None, actor=None, notes=None):
   """
     Record progress on a routing step.
@@ -687,6 +695,7 @@ def record_step_event(wo_step_id, event_type, qty=None, actor=None, notes=None):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def reset_steps_for_rework(work_order_id, from_sequence, actor=None):
   """
     Rework re-entry: PC picks the step where work resumes. Every
@@ -771,6 +780,7 @@ def reset_steps_for_rework(work_order_id, from_sequence, actor=None):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_template_for_sku(sku):
   """
     Default routing template for any SKU (LIBRARY mode browsing, and

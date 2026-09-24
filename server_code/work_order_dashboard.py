@@ -37,6 +37,7 @@ from decimal import Decimal
 
 # Import centralized configuration
 from . import db_config
+from . import perf_probe   # 2026-09-24 timing probe - remove with perf_probe.py
 from . import sales_orders_due_dashboard as _sod  # rush-method whitelist (single source)
 
 
@@ -125,6 +126,7 @@ def _plan_label(tier, position, plan_date_str, on_today):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_work_orders(status_filter=None, search_text=None, active_only=False, backorder_only=False, statuses=None, show_rush_only=False, limit=4000):
   """
     Fetch work orders with optional filtering.
@@ -456,6 +458,7 @@ def log_wo_cancel(cursor, work_order_id, wo_number, so_number, so_rel,
 
 
 @anvil.server.callable
+@perf_probe.timed
 def update_work_order_status(work_order_id, new_status, completed_by=None):
   """
     Update a work order's status (generic setter).
@@ -540,6 +543,7 @@ def update_work_order_status(work_order_id, new_status, completed_by=None):
 
 
 @anvil.server.callable
+@perf_probe.timed
 def unrelease_work_order(work_order_id, unreleased_by='Production'):
   """
     Reverse a Release: move a work order from 'Released' back to 'Created'.
@@ -607,6 +611,7 @@ def unrelease_work_order(work_order_id, unreleased_by='Production'):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def mark_work_order_printed(work_order_id):
   """
     Update the printed_at timestamp when a work order is printed.
@@ -639,6 +644,7 @@ def mark_work_order_printed(work_order_id):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_work_order_changes(work_order_id):
   """
     Fetch change history for a specific work order.
@@ -677,6 +683,7 @@ def get_work_order_changes(work_order_id):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def acknowledge_work_order_changes(work_order_id, acknowledged_by='Production'):
   """
     Mark all unacknowledged changes for a work order as reviewed.
@@ -720,6 +727,7 @@ def acknowledge_work_order_changes(work_order_id, acknowledged_by='Production'):
     return {'status': 'error', 'message': str(e)}
 
 @anvil.server.callable
+@perf_probe.timed
 def update_work_order_override_qty(work_order_id, override_qty):
   """Set or clear the PM production quantity override.
     Pass None to clear and revert to e21 quantity tracking."""
@@ -743,6 +751,7 @@ def update_work_order_override_qty(work_order_id, override_qty):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def update_work_order_due_date(work_order_id, due_date_str):
   """Set or clear the WO due date (production completion target).
     Pass an ISO date string (YYYY-MM-DD) or None to clear."""
@@ -776,6 +785,7 @@ def update_work_order_due_date(work_order_id, due_date_str):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def bulk_acknowledge_verify_work_orders(acknowledged_by='Production'):
   """
   Acknowledge and complete ALL work orders in Verify/Cancelled statuses.
@@ -862,6 +872,7 @@ def bulk_acknowledge_verify_work_orders(acknowledged_by='Production'):
 # =============================================================================
 
 @anvil.server.callable
+@perf_probe.timed
 def get_sales_backorder_detail(sales_order_number):
   """
   Fetch all sales backorder rows for a given sales order number.
