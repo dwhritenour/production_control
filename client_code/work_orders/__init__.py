@@ -52,8 +52,14 @@ class work_orders(work_ordersTemplate):
     # Daily Plan (056): 'Plan' column, chip, plan-only filter, sort option
     self._plan_only = False
     self._add_plan_column()
-    self._add_desc_column()
+    # 2026-10-14: Description now stacks under Part# in the row template
+    # (cp_part), so the code-added Description column is no longer created.
     self._add_routing_column()
+
+    # Quick Release (2026-10-14): the checked set + the batch button. Rows
+    # keep their checkbox in step with _picked across pages / re-renders.
+    self._picked = set()
+    self._add_quick_release_button()
     self._wire_plan_filter()
     try:
       if 'Plan (position)' not in (self.dd_sort.items or []):
@@ -103,6 +109,8 @@ class work_orders(work_ordersTemplate):
 
     if result['status'] == 'success':
       self._work_orders = result['work_orders']
+      self._picked = set()
+      self._style_quick_release_button()
       if self._plan_only:
         # 056: only today's published plan (server already sorted it first)
         self._work_orders = [w for w in self._work_orders if w.get('on_todays_plan')]
@@ -369,6 +377,100 @@ class work_orders(work_ordersTemplate):
     on_plan = bool(row.get('on_todays_plan'))
     return (not on_plan, row.get('plan_position') or 10 ** 9,
             row.get('work_order_number') or '')
+
+  # =========================================================================
+  # QUICK RELEASE (2026-10-14): checked set + "Quick Release checked (N)"
+  # =========================================================================
+  QUICK_BATCH_MAX = 40          # mirrors routing_desk.BATCH_MAX (one call per chunk)
+
+  def _add_quick_release_button(self):
+    """A filled button in the summary row, hidden until something is checked.
+    Code-added (no designer change); a designer Button named
+    btn_quick_release_checked is used instead when present."""
+    btn = getattr(self, 'btn_quick_release_checked', None)
+    if btn is None:
+      btn = Button(text='Quick Release checked (0)', icon='fa:paper-plane',
+                   role='filled-button', visible=False)
+      try:
+        self.flow_summary.add_component(btn)
+      except Exception:
+        try:
+          self.flow_buttons.add_component(btn)
+        except Exception:
+          return
+      self.btn_quick_release_checked = btn
+    btn.set_event_handler('click', self._quick_release_checked_click)
+    self._style_quick_release_button()
+
+  def toggle_pick(self, work_order_id, checked):
+    """Called by the row template's checkbox."""
+    if work_order_id is None:
+      return
+    if checked:
+      self._picked.add(work_order_id)
+    else:
+      self._picked.discard(work_order_id)
+    self._style_quick_release_button()
+
+  def note_released(self, n):
+    """A row released itself: keep the Plan chip honest without a reload."""
+    try:
+      txt = self.lk_plan_count.text          # 'Plan: 12/40 released'
+      a, b = txt.split(':', 1)[1].strip().split(' ')[0].split('/')
+      self.lk_plan_count.text = f"Plan: {int(a) + n}/{b} released"
+    except Exception:
+      pass
+
+  def _style_quick_release_button(self):
+    btn = getattr(self, 'btn_quick_release_checked', None)
+    if btn is None:
+      return
+    n = len(self._picked)
+    btn.text = f"Quick Release checked ({n})"
+    btn.visible = n > 0
+
+  def _quick_release_checked_click(self, **event_args):
+    ids = [w['work_order_id'] for w in self._work_orders
+           if w.get('work_order_id') in self._picked and w.get('status') == 'Created']
+    skipped = len(self._picked) - len(ids)
+    if not ids:
+      Notification('Nothing checked that is still Created.').show()
+      return
+    msg = (f"Release {len(ids)} work order{'s' if len(ids) != 1 else ''}?\n\n"
+           f"Each keeps its saved routing: step 1 goes Ready on that department's board, "
+           f"subscribed departments are texted, nothing is edited.")
+    if skipped:
+      msg += f"\n\n{skipped} checked but no longer Created - skipped."
+    if not confirm(msg):
+      return
+    btn = self.btn_quick_release_checked
+    btn.enabled = False
+    released, failed, messages = 0, 0, []
+    try:
+      for i in range(0, len(ids), self.QUICK_BATCH_MAX):
+        chunk = ids[i:i + self.QUICK_BATCH_MAX]
+        res = anvil.server.call('release_work_orders', chunk, None, 'quick-batch')
+        if res.get('status') != 'success':
+          failed += len(chunk)
+          messages.append(res.get('message') or 'batch failed')
+          continue
+        released += int(res.get('released') or 0)
+        failed += int(res.get('failed') or 0)
+        by_id = {w['work_order_id']: w for w in self._work_orders}
+        for one in res.get('results') or []:
+          if one.get('status') != 'success':
+            w = by_id.get(one.get('work_order_id'))
+            messages.append(f"{w['work_order_number'] if w else one.get('work_order_id')}: "
+                            f"{one.get('message') or 'failed'}")
+    finally:
+      btn.enabled = True
+    self._picked = set()
+    summary = f"Released {released}" + (f", {failed} failed" if failed else '')
+    if messages:
+      alert('\n'.join([summary, ''] + messages[:20]), title='Quick Release')
+    else:
+      Notification(summary).show()
+    self.refresh_data()
 
   # =========================================================================
   # SORTING

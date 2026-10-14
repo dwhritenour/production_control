@@ -3,6 +3,24 @@ from anvil import *
 import anvil.server
 
 
+def _release_summary(res):
+  """'F>P>A - Material Handling, Pre-Assembly auto-completed - now Ready: Assemble'
+  from a release_work_order result."""
+  bits = [res.get('route_summary') or '']
+  auto = [a.get('department_name') for a in (res.get('auto_completed') or [])]
+  if auto:
+    bits.append(', '.join(auto) + ' auto-completed (no board yet)')
+  nxt = [n.get('department_name') + ('' if n.get('texted') else ' (no text)')
+         for n in (res.get('next_ready') or [])]
+  if nxt:
+    bits.append('now Ready: ' + ', '.join(nxt))
+  elif not auto:
+    first = [f.get('department_name') for f in (res.get('first_steps') or [])]
+    if first:
+      bits.append('step 1 Ready at ' + ', '.join(first))
+  return ' - '.join(b for b in bits if b)
+
+
 
 class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
   """
@@ -17,37 +35,32 @@ class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
     What remains here: status color label, change badge, due-date display,
     inline WO-due-date + override-qty edits, notes preview, and the
     WO# / SO# popup links.
+
+    2026-10-14 (default routing, migration 108): every order arrives routed,
+    so a guarded one-click release is back on the row - the Quick Release
+    cell (cb_pick + btn_quick_release) calls routing_desk.release_work_order,
+    which flips step 1 Pending -> Ready, texts if anyone subscribes, sets
+    Released and logs; it never rewrites the routing (the old grid button
+    did a bare status flip; this one goes through the same guarded path as
+    the v2.0 Desk). Part# / Description and Material / SE are stacked cells
+    (cp_part, cp_config) to make room for it.
   """
 
   def __init__(self, **properties):
     self.init_components(**properties)
 
     status = self.item.get('status', '')
+    self._paint_status(status)
 
-    # ---- Status color coding via explicit label --------------------------
-    self.lbl_status.text = status
-    if status == 'Created':
-      self.lbl_status.foreground = '#2196F3'  # blue
-      self.lbl_status.bold = True
-    elif status == 'Released':
-      self.lbl_status.foreground = '#00897B'  # teal -- handed to the floor
-      self.lbl_status.bold = True
-    elif status == 'Assigned':
-      self.lbl_status.foreground = '#607D8B'  # blue-gray
-      self.lbl_status.bold = True
-    elif status == 'In Progress':
-      self.lbl_status.foreground = '#FF9800'  # amber
-      self.lbl_status.bold = True
-    elif status == 'Paused':
-      self.lbl_status.foreground = '#C62828'  # red-ish -- stalled on the floor
-      self.lbl_status.bold = True
-    elif status == 'Complete':
-      self.lbl_status.foreground = '#4CAF50'  # green
-      self.lbl_status.bold = True
-    elif status in ('Shipped - Verify', 'Invoiced - Verify',
-                    'Closed - Verify', 'Cancelled'):
-      self.lbl_status.foreground = '#7B2FBE'  # purple
-      self.lbl_status.bold = True
+    # ---- Stacked cells (2026-10-14): Part# over Description, Material over SE
+    self.lbl_part.text = self.item.get('part_number') or ''
+    self.lbl_material.text = (self.item.get('material_value') or '').strip()
+    self.lbl_se.text = (self.item.get('se_value') or '').strip()
+    if self.item.get('is_nonstock'):
+      self.lbl_part.italic = True
+
+    # ---- Quick Release cell (2026-10-14) -------------------------------------
+    self._wire_quick_release(status)
 
     # ---- Change badge -- clickable to open change history popup -----------
     change_count = self.item.get('pending_change_count', 0) or 0
@@ -171,6 +184,87 @@ class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
         self.background = ''
     except Exception:
       pass
+
+  def _paint_status(self, status):
+    """Status colour coding via explicit label (also re-run after a Quick
+    Release flips the row to Released)."""
+    self.lbl_status.text = status
+    self.lbl_status.foreground = ''
+    self.lbl_status.bold = False
+    if status == 'Created':
+      self.lbl_status.foreground = '#2196F3'  # blue
+      self.lbl_status.bold = True
+    elif status == 'Released':
+      self.lbl_status.foreground = '#00897B'  # teal -- handed to the floor
+      self.lbl_status.bold = True
+    elif status == 'Assigned':
+      self.lbl_status.foreground = '#607D8B'  # blue-gray
+      self.lbl_status.bold = True
+    elif status == 'In Progress':
+      self.lbl_status.foreground = '#FF9800'  # amber
+      self.lbl_status.bold = True
+    elif status == 'Paused':
+      self.lbl_status.foreground = '#C62828'  # red-ish -- stalled on the floor
+      self.lbl_status.bold = True
+    elif status == 'Complete':
+      self.lbl_status.foreground = '#4CAF50'  # green
+      self.lbl_status.bold = True
+    elif status in ('Shipped - Verify', 'Invoiced - Verify',
+                    'Closed - Verify', 'Cancelled'):
+      self.lbl_status.foreground = '#7B2FBE'  # purple
+      self.lbl_status.bold = True
+
+
+  # =========================================================================
+  # QUICK RELEASE (2026-10-14) - the guarded one-click release on the row
+  # =========================================================================
+  def _wire_quick_release(self, status):
+    parent = None
+    try:
+      parent = get_open_form()
+    except Exception:
+      pass
+    picked = False
+    try:
+      picked = self.item.get('work_order_id') in getattr(parent, '_picked', set())
+    except Exception:
+      picked = False
+    self.cb_pick.checked = picked
+    releasable = (status == 'Created')
+    self.cb_pick.visible = releasable
+    self.btn_quick_release.visible = releasable
+    self.cb_pick.set_event_handler('change', self._pick_change)
+    self.btn_quick_release.set_event_handler('click', self._quick_release_click)
+
+  def _pick_change(self, **event_args):
+    try:
+      get_open_form().toggle_pick(self.item.get('work_order_id'), self.cb_pick.checked)
+    except Exception:
+      pass
+
+  def _quick_release_click(self, **event_args):
+    wid = self.item.get('work_order_id')
+    won = self.item.get('work_order_number', '')
+    self.btn_quick_release.enabled = False
+    self.btn_quick_release.text = '...'
+    try:
+      res = anvil.server.call('release_work_order', wid, None, 'quick')
+    finally:
+      self.btn_quick_release.enabled = True
+      self.btn_quick_release.text = 'Release'
+    if res.get('status') != 'success':
+      alert(f"{won}: {res.get('message', 'Unknown error')}")
+      return
+    self.item['status'] = 'Released'
+    self._paint_status('Released')
+    self.cb_pick.visible = False
+    self.btn_quick_release.visible = False
+    try:
+      get_open_form().toggle_pick(wid, False)
+      get_open_form().note_released(1)
+    except Exception:
+      pass
+    Notification(f"{won} released - {_release_summary(res)}").show()
 
   # Statuses that always carry a saved routing (release writes it). A
   # 'Created' WO may still have one (UnRelease keeps the snapshot), so the

@@ -54,13 +54,79 @@ components:
   name: lbl_plan
   properties: {}
   type: Link
-- layout_properties: {column: SEBNMW}
-  name: lbl_desc
-  properties: {}
-  type: Label
 - layout_properties: {column: TQXVKL}
   name: lk_routing
   properties: {align: center, icon: 'fa:eye'}
   type: Link
+- components:
+  - layout_properties: {grid_position: 'MZJCQY,VKLPFY'}
+    name: lbl_part
+    properties:
+      font_size: null
+      foreground: '#49454E'
+      spacing:
+        margin: ['4', null, '4', null]
+        padding: ['0', null, '0', null]
+    type: Label
+  - layout_properties: {grid_position: 'APITYY,OLUWRF'}
+    name: lbl_desc
+    properties:
+      font_size: null
+      foreground: '#49454E'
+      spacing:
+        margin: ['0', null, '0', null]
+        padding: ['0', null, '0', null]
+    type: Label
+  layout_properties: {column: NTNWAU}
+  name: cp_part
+  properties:
+    spacing:
+      margin: ['4', null, '4', null]
+  type: ColumnPanel
+- components:
+  - layout_properties: {grid_position: 'MZJCQY,VKLPFY'}
+    name: lbl_material
+    properties:
+      font_size: null
+      foreground: '#49454E'
+      spacing:
+        margin: ['4', null, '4', null]
+        padding: ['0', null, '0', null]
+    type: Label
+  - layout_properties: {grid_position: 'APITYY,OLUWRF'}
+    name: lbl_se
+    properties:
+      font_size: null
+      foreground: '#49454E'
+      spacing:
+        margin: ['0', null, '0', null]
+        padding: ['0', null, '0', null]
+    type: Label
+  layout_properties: {column: SVQOSD}
+  name: cp_config
+  properties:
+    spacing:
+      margin: ['4', null, '4', null]
+  type: ColumnPanel
+- components:
+  - layout_properties: {}
+    name: cb_pick
+    properties: {text: ''}
+    type: CheckBox
+  - layout_properties: {}
+    name: btn_quick_release
+    properties:
+      icon: fa:paper-plane
+      role: outlined-button
+      spacing:
+        padding: ['0', '15', '0', '15']
+      text: Release
+    type: Button
+  layout_properties: {column: NEORKT}
+  name: fp_release
+  properties:
+    spacing:
+      margin: ['0', null, '0', null]
+  type: FlowPanel
 container: {type: DataRowPanel}
 is_package: true
