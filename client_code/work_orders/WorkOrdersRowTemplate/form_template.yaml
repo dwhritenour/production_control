@@ -111,7 +111,10 @@ components:
 - components:
   - layout_properties: {}
     name: cb_pick
-    properties: {text: ''}
+    properties:
+      spacing:
+        margin: ['8', null, null, null]
+      text: ''
     type: CheckBox
   - layout_properties: {}
     name: btn_quick_release
@@ -119,6 +122,7 @@ components:
       icon: fa:paper-plane
       role: outlined-button
       spacing:
+        margin: ['8', null, null, null]
         padding: ['0', '15', '0', '15']
       text: Release
     type: Button
