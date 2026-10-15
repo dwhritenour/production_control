@@ -133,7 +133,10 @@ class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
     self.link_wo_number.bold = True
     self.link_wo_number.set_event_handler('click', self.show_detail)
 
-    self.link_so_number.text = self.item.get('so_number_display', '')
+    # 2026-10-15: one cell SO# / Rel# / Item# ('597178-001-10'); the Line column is gone.
+    line = self.item.get('sales_order_line')
+    so_disp = self.item.get('so_number_display', '') or ''
+    self.link_so_number.text = f"{so_disp}-{line}" if (so_disp and line is not None) else so_disp
     self.link_so_number.set_event_handler('click', self.show_backorder_detail)
 
     # ---- Routing diagram link (2026-09-12) -----------------------------------
