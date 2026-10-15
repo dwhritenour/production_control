@@ -40,7 +40,32 @@ notes columns nobody reads until they click):
 migration 084. The 09-17 version looped in Python, two statements per open
 step; on 09-23 Accept Orphans hit 228 open steps (~456 round trips) and
 died on Anvil's 30 s call limit. Each caller is now ONE EXEC.
+2026-10-06 (Production Control v2.0, Routing Desk slice 1):
+  - RELEASE IS GUARDED: update_work_order_status('Released') now delegates to
+    routing_desk.release_work_order, so no path can put a work order on the
+    floor without a saved routing (the old editor flow keeps working: the
+    release only readies steps that are still Pending and texts for those).
+  - UNRELEASE DEMOTES: unrelease_work_order puts Ready steps back to Pending
+    (Edit event 'un-released') and parks any text still Queued, so an
+    un-released work order leaves every department queue (fix F1 / M5).
+  - Plan chip: denominator = every WO on today's plan except Cancelled,
+    numerator = everything past Created (fix F6 / M4). No more counting down.
+  - get_work_orders ships wo_type (Standard / Non-Standard).
 """
+
+# =============================================================================
+# Version:       2.0.1
+# Last updated:  2026-10-06
+# Changelog (this module only; versioning starts here per Dev-Kit rule):
+#   2.0.0 (2026-10-06) Release delegated to routing_desk (guarded); UnRelease
+#                      demotes Ready steps; plan-chip counts fixed; wo_type
+#                      added to the grid payload.
+# =============================================================================
+
+__version__       = "2.0.1"
+__version_date__  = "2026-10-06"
+__version_notes__ = ("Release guarded via routing_desk; UnRelease demotes Ready steps; "
+                     "plan chip math; wo_type in grid rows")
 
 import anvil.server
 from datetime import datetime, date
@@ -50,6 +75,7 @@ from decimal import Decimal
 from . import db_config
 from . import perf_probe   # 2026-09-24 timing probe - remove with perf_probe.py
 from . import sales_orders_due_dashboard as _sod  # rush-method whitelist (single source)
+from . import routing_desk as _desk  # v2.0: guarded release + UnRelease demotion (single write path)
 
 
 # =============================================================================
@@ -203,6 +229,7 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
         SELECT {top_clause}
             wo.work_order_id,{plan_cols}
             wo.work_order_number,
+            wo.wo_type,
             wo.sales_order_number,
             wo.sales_order_rel,
             wo.sales_order_line,
@@ -401,15 +428,18 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
     plan_sql = "0 AS plan_today, 0 AS plan_released"
     plan_params = ()
     if has_plan:
-      plan_sql = f"""
+      # v2.0 (F6): the chip reads "released / planned". Planned = every WO on
+      # today's plan except Cancelled; released = everything past Created.
+      # Completed work stays in BOTH numbers, so the chip no longer counts
+      # down during the day.
+      plan_sql = """
             (SELECT COUNT(*) FROM dbo.work_orders
               WHERE plan_date = CAST(GETDATE() AS DATE)
-                AND status NOT IN ({", ".join(["%s"] * len(_WO_TERMINAL))})) AS plan_today,
+                AND status <> 'Cancelled') AS plan_today,
             (SELECT COUNT(*) FROM dbo.work_orders
               WHERE plan_date = CAST(GETDATE() AS DATE)
-                AND status <> 'Created'
-                AND status NOT IN ({", ".join(["%s"] * len(_WO_TERMINAL))})) AS plan_released"""
-      plan_params = _WO_TERMINAL + _WO_TERMINAL
+                AND status NOT IN ('Created', 'Cancelled')) AS plan_released"""
+      plan_params = ()
     cursor.execute(f"""
         SELECT
             (SELECT COUNT(*) FROM dbo.work_orders
@@ -543,7 +573,15 @@ def update_work_order_status(work_order_id, new_status, completed_by=None):
     
     Returns:
         dict with 'status': 'success' or 'error'
+
+    v2.0: 'Released' is not set here any more. It delegates to
+    routing_desk.release_work_order, the one guarded path (routing must
+    exist; first group -> Ready; texts; audit). Kept as a callable name so
+    the old sku_details editor flow keeps working until it is retired.
   """
+  if new_status == 'Released':
+    return _desk.release_work_order(work_order_id, actor=None, source='legacy')
+
   try:
     conn = get_connection()
     cursor = conn.cursor()
@@ -608,6 +646,19 @@ def update_work_order_status(work_order_id, new_status, completed_by=None):
     return {'status': 'error', 'message': str(e)}
 
 
+def _worked_by_floor(cursor, work_order_id):
+  """True when a routing step has recorded work at a department that is NOT
+  auto-completed at release - i.e. a person on the floor has this order."""
+  auto = _desk._auto_complete_depts(cursor, {})
+  cursor.execute("""
+      SELECT d.dept_code FROM dbo.pc_wo_routing_steps s
+      JOIN dbo.pc_departments d ON d.department_id = s.department_id
+      WHERE s.work_order_id = %s
+        AND (s.status IN ('In Progress', 'Complete') OR s.qty_completed > 0)
+  """, (work_order_id,))
+  return any((r['dept_code'] or '').upper() not in auto for r in cursor.fetchall())
+
+
 @anvil.server.callable
 @perf_probe.timed
 def unrelease_work_order(work_order_id, unreleased_by='Production'):
@@ -633,7 +684,8 @@ def unrelease_work_order(work_order_id, unreleased_by='Production'):
     cursor = conn.cursor()
 
     cursor.execute(
-      "SELECT status FROM dbo.work_orders WHERE work_order_id = %s",
+      "SELECT work_order_id, work_order_number, sales_order_number, sales_order_rel, status "
+      "FROM dbo.work_orders WHERE work_order_id = %s",
       (work_order_id,))
     row = cursor.fetchone()
     if not row:
@@ -650,6 +702,18 @@ def unrelease_work_order(work_order_id, unreleased_by='Production'):
                     f"have the SE Department unassign it first.")
       }
 
+    # Guard: a step somebody has started or completed means the floor has
+    # this work order; pulling it back would contradict the routing. Steps
+    # at a department that is auto-completed at release (no board yet -
+    # global_parameters pc_auto_complete_*, 2.0.1) are not "the floor".
+    if _worked_by_floor(cursor, work_order_id):
+      conn.close()
+      return {
+        'status': 'error',
+        'message': ('A routing step on this work order already has recorded '
+                    'work. It cannot be un-released; use Reset for Rework instead.')
+      }
+
     cursor.execute("""
         UPDATE dbo.work_orders
         SET status = 'Created'
@@ -657,16 +721,24 @@ def unrelease_work_order(work_order_id, unreleased_by='Production'):
           AND status = 'Released'
     """, (work_order_id,))
     affected = cursor.rowcount
-    conn.commit()
-    conn.close()
-
     if affected == 0:
+      conn.rollback()
+      conn.close()
       return {
         'status': 'error',
         'message': ('Work order changed status before it could be '
                     'un-released. Refresh and try again.')
       }
-    return {'status': 'success'}
+
+    # v2.0 (F1): the routing snapshot is kept, but its Ready step(s) go back
+    # to Pending so no department queue shows an un-released work order.
+    actor = (unreleased_by or _current_actor() or 'Production')[:50]
+    demoted = _desk.demote_ready_steps(cursor, work_order_id, actor, 'un-released')
+    _desk._log_action(cursor, row, 'UnRelease', 'single', 'Released', 'Created', actor)
+
+    conn.commit()
+    conn.close()
+    return {'status': 'success', 'steps_demoted': demoted}
 
   except Exception as e:
     return {'status': 'error', 'message': str(e)}

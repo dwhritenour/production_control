@@ -13,7 +13,31 @@ Layout:
 Author: Dave Whritenour / Claude AI Assistant
 Project: Titan Flow Control - Year of Automation
 Created: March 2026
+
+2026-10-06 (Production Control v2.0, Routing Desk slice 1):
+  - cancel_so_work_orders closes each cancelled work order's routing through
+    dbo.sp_pc_close_wo_routing (open steps Skipped) - the single Cancel has
+    done this since the 2026-09-17 step-4 decision; the packet path had not,
+    leaving phantom Ready rows on department queues (fix F2).
+  - unrelease_so_work_orders demotes each un-released work order's Ready
+    steps to Pending and parks unsent texts (fix F1 / M5), one action-log
+    row per work order.
+  - start_so_work_orders / complete_so_work_orders / release_so_work_orders
+    removed (bulk status flips with no routing; no caller since 07-27) (F5).
 """
+
+# =============================================================================
+# Version:       2.0.1
+# Last updated:  2026-10-06
+# Changelog (this module only; versioning starts here per Dev-Kit rule):
+#   2.0.0 (2026-10-06) Packet cancel closes routing; packet un-release demotes
+#                      Ready steps; legacy bulk status callables removed.
+# =============================================================================
+
+__version__       = "2.0.1"
+__version_date__  = "2026-10-06"
+__version_notes__ = ("Packet cancel closes routing (sp_pc_close_wo_routing); packet "
+                     "un-release demotes Ready steps; legacy bulk callables removed")
 
 import anvil.server
 import anvil.media
@@ -36,6 +60,7 @@ KeepTogether, HRFlowable, PageBreak
 from . import db_config
 from .work_order_pdf_generator import get_work_order_data, _now_eastern
 from .work_order_dashboard import _current_actor, log_wo_cancel
+from . import routing_desk as _desk   # v2.0: UnRelease demotion + action log (single write path)
 
 
 # =============================================================================
@@ -801,230 +826,12 @@ def download_so_packet_pdf(sales_order_number, sales_order_rel):
 
 
 # =============================================================================
-# START ALL WORK ORDERS FOR A SALES ORDER
+# (v2.0, 2026-10-06) start_so_work_orders / complete_so_work_orders /
+# release_so_work_orders REMOVED. All three flipped work_orders.status in bulk
+# without a routing (pre-routing era, no client caller since 2026-07-27).
+# Release goes through routing_desk.release_work_order(s); nothing else may
+# put a work order on the floor.
 # =============================================================================
-
-@anvil.server.callable
-def start_so_work_orders(sales_order_number, sales_order_rel):
-  """
-  Move all 'Created' work orders for a sales order to 'In Progress'.
-
-  Only transitions WOs currently in 'Created' status — already started
-  or completed WOs are left untouched.
-
-  Args:
-    sales_order_number: str
-    sales_order_rel: str
-
-  Returns:
-    dict with status, started count, and already-started count
-  """
-  try:
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    # Count how many are eligible to start
-    cursor.execute("""
-      SELECT COUNT(*) AS cnt
-      FROM dbo.work_orders
-      WHERE sales_order_number = %s
-        AND sales_order_rel = %s
-        AND status = 'Created'
-    """, (sales_order_number, sales_order_rel))
-    created_count = cursor.fetchone()['cnt']
-
-    # Count how many are already past 'Created'
-    cursor.execute("""
-      SELECT COUNT(*) AS cnt
-      FROM dbo.work_orders
-      WHERE sales_order_number = %s
-        AND sales_order_rel = %s
-        AND status != 'Created'
-    """, (sales_order_number, sales_order_rel))
-    already_started = cursor.fetchone()['cnt']
-
-    if created_count == 0:
-      conn.close()
-      return {
-        'status': 'success',
-        'started': 0,
-        'already_started': already_started,
-        'message': 'No work orders in Created status to start'
-      }
-
-    # Bulk update
-    cursor.execute("""
-      UPDATE dbo.work_orders
-      SET status = 'In Progress'
-      WHERE sales_order_number = %s
-        AND sales_order_rel = %s
-        AND status = 'Created'
-    """, (sales_order_number, sales_order_rel))
-
-    conn.commit()
-    conn.close()
-
-    return {
-      'status': 'success',
-      'started': created_count,
-      'already_started': already_started,
-      'message': f"Started {created_count} work order{'s' if created_count != 1 else ''}"
-    }
-
-  except Exception as e:
-    return {
-      'status': 'error',
-      'message': str(e)
-    }
-
-
-# =============================================================================
-# COMPLETE ALL WORK ORDERS FOR A SALES ORDER
-# =============================================================================
-
-@anvil.server.callable
-def complete_so_work_orders(sales_order_number, sales_order_rel,
-                            completed_by=None):
-  """
-  Mark all 'In Progress' work orders for a sales order as 'Complete'.
-
-  Only transitions WOs currently in 'In Progress' status — Created,
-  Verify, or already Complete WOs are left untouched.
-
-  Args:
-    sales_order_number: str
-    sales_order_rel: str
-    completed_by: str — who completed them (defaults to 'Production')
-
-  Returns:
-    dict with status, completed count, and skipped count
-  """
-  try:
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    # Count how many are eligible to complete
-    cursor.execute("""
-      SELECT COUNT(*) AS cnt
-      FROM dbo.work_orders
-      WHERE sales_order_number = %s
-        AND sales_order_rel = %s
-        AND status = 'In Progress'
-    """, (sales_order_number, sales_order_rel))
-    eligible_count = cursor.fetchone()['cnt']
-
-    # Count how many are not eligible (Created, Complete, Verify, etc.)
-    cursor.execute("""
-      SELECT COUNT(*) AS cnt
-      FROM dbo.work_orders
-      WHERE sales_order_number = %s
-        AND sales_order_rel = %s
-        AND status != 'In Progress'
-    """, (sales_order_number, sales_order_rel))
-    skipped_count = cursor.fetchone()['cnt']
-
-    if eligible_count == 0:
-      conn.close()
-      return {
-        'status': 'success',
-        'completed': 0,
-        'skipped': skipped_count,
-        'message': 'No work orders in In Progress status to complete'
-      }
-
-    # Bulk update
-    cursor.execute("""
-      UPDATE dbo.work_orders
-      SET status = 'Complete',
-          completed_at = GETDATE(),
-          completed_by = %s
-      WHERE sales_order_number = %s
-        AND sales_order_rel = %s
-        AND status = 'In Progress'
-    """, (completed_by or 'Production', sales_order_number, sales_order_rel))
-
-    conn.commit()
-    conn.close()
-
-    return {
-      'status': 'success',
-      'completed': eligible_count,
-      'skipped': skipped_count,
-      'message': f"Completed {eligible_count} work order{'s' if eligible_count != 1 else ''}"
-    }
-
-  except Exception as e:
-    return {
-      'status': 'error',
-      'message': str(e)
-    }
-
-
-
-
-# =============================================================================
-# RELEASE ALL WORK ORDERS FOR A SALES ORDER  (SE Department rollout 2026-06-17)
-# =============================================================================
-
-@anvil.server.callable
-def release_so_work_orders(sales_order_number, sales_order_rel):
-  """
-  Release every 'Created' work order for a sales order to 'Released' so the
-  whole SO packet appears on the SE Department floor board at once.
-
-  Only transitions WOs currently in 'Created' status; anything already
-  Released or further along is left untouched.
-
-  Returns:
-    dict with status, released count, already_released count, message
-  """
-  try:
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-      SELECT COUNT(*) AS cnt
-      FROM dbo.work_orders
-      WHERE sales_order_number = %s AND sales_order_rel = %s
-        AND status = 'Created'
-    """, (sales_order_number, sales_order_rel))
-    created_count = cursor.fetchone()['cnt']
-
-    cursor.execute("""
-      SELECT COUNT(*) AS cnt
-      FROM dbo.work_orders
-      WHERE sales_order_number = %s AND sales_order_rel = %s
-        AND status != 'Created'
-    """, (sales_order_number, sales_order_rel))
-    already_released = cursor.fetchone()['cnt']
-
-    if created_count == 0:
-      conn.close()
-      return {
-        'status': 'success',
-        'released': 0,
-        'already_released': already_released,
-        'message': 'No work orders in Created status to release'
-      }
-
-    cursor.execute("""
-      UPDATE dbo.work_orders
-      SET status = 'Released'
-      WHERE sales_order_number = %s AND sales_order_rel = %s
-        AND status = 'Created'
-    """, (sales_order_number, sales_order_rel))
-
-    conn.commit()
-    conn.close()
-    return {
-      'status': 'success',
-      'released': created_count,
-      'already_released': already_released,
-      'message': f"Released {created_count} work order{'s' if created_count != 1 else ''}"
-    }
-
-  except Exception as e:
-    return {'status': 'error', 'message': str(e)}
 
 
 # =============================================================================
@@ -1037,10 +844,15 @@ def unrelease_so_work_orders(sales_order_number, sales_order_rel):
   Reverse a packet Release: move every 'Released' work order for a sales order
   back to 'Created', pulling the whole packet off the SE Department board.
 
-  Only transitions WOs currently in 'Released'. WOs the floor has already
-  picked up ('Assigned' / 'In Progress' / 'Paused') are left untouched and
-  reported as skipped; Created / terminal WOs are ignored. The status guard
-  lives in the WHERE clause so a stale client cannot un-release floor work.
+  Only transitions WOs currently in 'Released'. Work orders the floor has
+  already picked up - a routing step In Progress / Complete or with recorded
+  quantity (the retired 'Assigned' / 'In Progress' / 'Paused' statuses are
+  no longer on work_orders.status, DECISION 2026-09-17) - are left in place
+  and reported as skipped_on_floor. Created / terminal WOs are ignored.
+
+  v2.0: each un-released work order's Ready step(s) are demoted to Pending
+  (Edit event 'un-released (packet)'), any Queued text is parked, and an
+  action-log row is written - the same treatment as the single UnRelease.
 
   Returns:
     dict with status, unreleased count, skipped_on_floor count, message
@@ -1049,23 +861,30 @@ def unrelease_so_work_orders(sales_order_number, sales_order_rel):
     conn = get_connection()
     cursor = conn.cursor()
 
+    # Released WOs on the packet, split into pull-back-able and on-the-floor
+    # (worked routing step) - the guard that replaced the retired statuses.
     cursor.execute("""
-      SELECT COUNT(*) AS cnt
-      FROM dbo.work_orders
-      WHERE sales_order_number = %s AND sales_order_rel = %s
-        AND status = 'Released'
+      SELECT w.work_order_id, w.work_order_number, w.sales_order_number, w.sales_order_rel,
+             w.status,
+             CASE WHEN EXISTS (SELECT 1 FROM dbo.pc_wo_routing_steps s
+                                JOIN dbo.pc_departments d ON d.department_id = s.department_id
+                                WHERE s.work_order_id = w.work_order_id
+                                  AND (s.status IN ('In Progress', 'Complete')
+                                       OR s.qty_completed > 0)
+                                  AND NOT EXISTS (SELECT 1 FROM dbo.global_parameters g
+                                                  WHERE g.parameter_name = 'pc_auto_complete_' + d.dept_code
+                                                    AND g.parameter_value = 1))
+                  THEN 1 ELSE 0 END AS on_floor
+      FROM dbo.work_orders w
+      WHERE w.sales_order_number = %s AND w.sales_order_rel = %s
+        AND w.status = 'Released'
+      ORDER BY w.work_order_number
     """, (sales_order_number, sales_order_rel))
-    released_count = cursor.fetchone()['cnt']
+    released = cursor.fetchall()
+    targets = [r for r in released if not r['on_floor']]
+    skipped_on_floor = len(released) - len(targets)
 
-    cursor.execute("""
-      SELECT COUNT(*) AS cnt
-      FROM dbo.work_orders
-      WHERE sales_order_number = %s AND sales_order_rel = %s
-        AND status IN ('Assigned', 'In Progress', 'Paused')
-    """, (sales_order_number, sales_order_rel))
-    skipped_on_floor = cursor.fetchone()['cnt']
-
-    if released_count == 0:
+    if not targets:
       conn.close()
       return {
         'status': 'success',
@@ -1074,20 +893,27 @@ def unrelease_so_work_orders(sales_order_number, sales_order_rel):
         'message': 'No work orders in Released status to un-release'
       }
 
-    cursor.execute("""
-      UPDATE dbo.work_orders
-      SET status = 'Created'
-      WHERE sales_order_number = %s AND sales_order_rel = %s
-        AND status = 'Released'
-    """, (sales_order_number, sales_order_rel))
+    actor = _current_actor()
+    unreleased = 0
+    for r in targets:
+      cursor.execute("""
+        UPDATE dbo.work_orders
+        SET status = 'Created'
+        WHERE work_order_id = %s AND status = 'Released'
+      """, (r['work_order_id'],))
+      if cursor.rowcount != 1:
+        continue                     # moved under us; leave it alone
+      _desk.demote_ready_steps(cursor, r['work_order_id'], actor, 'un-released (packet)')
+      _desk._log_action(cursor, r, 'UnRelease', 'packet', 'Released', 'Created', actor)
+      unreleased += 1
 
     conn.commit()
     conn.close()
     return {
       'status': 'success',
-      'unreleased': released_count,
+      'unreleased': unreleased,
       'skipped_on_floor': skipped_on_floor,
-      'message': f"Un-released {released_count} work order{'s' if released_count != 1 else ''}"
+      'message': f"Un-released {unreleased} work order{'s' if unreleased != 1 else ''}"
     }
 
   except Exception as e:
@@ -1100,7 +926,9 @@ def unrelease_so_work_orders(sales_order_number, sales_order_rel):
 
 # Live statuses the office may cancel in bulk. Terminal/external statuses
 # (Complete, Cancelled, the three '- Verify' states) are left untouched.
-_CANCELLABLE_STATUSES = ('Created', 'Released', 'Assigned', 'In Progress', 'Paused')
+# v2.0: 'Assigned' / 'In Progress' / 'Paused' dropped - retired from
+# work_orders.status by DECISION 2026-09-17 (CK_work_orders_status, 076).
+_CANCELLABLE_STATUSES = ('Created', 'Released')
 
 
 @anvil.server.callable
@@ -1133,11 +961,17 @@ def cancel_so_work_orders(sales_order_number, sales_order_rel):
   """
   Cancel every live work order for a sales order (status -> 'Cancelled').
 
-  Cancels WOs in any of Created / Released / Assigned / In Progress / Paused.
-  Already-Complete, already-Cancelled, and the e21 '- Verify' WOs are skipped.
+  Cancels WOs in Created / Released. Already-Complete, already-Cancelled,
+  and the e21 '- Verify' WOs are skipped.
+
+  v2.0 (F2): every cancelled work order's routing is closed in the same
+  transaction through dbo.sp_pc_close_wo_routing (open steps Skipped with
+  a 'Skip' event), exactly as the single Cancel has done since 09-17, so no
+  department queue keeps a phantom 'Ready' row for cancelled work.
 
   Returns:
-    dict with status, cancelled count, skipped count, message
+    dict with status, cancelled count, skipped count,
+    routing_steps_skipped, message
   """
   try:
     conn = get_connection()
@@ -1186,9 +1020,28 @@ def cancel_so_work_orders(sales_order_number, sales_order_rel):
         AND status IN ({placeholders})
     """, (sales_order_number, sales_order_rel) + _CANCELLABLE_STATUSES)
 
+    _actor = _current_actor()
+
+    # Close each cancelled work order's routing (F2): one EXEC per WO, same
+    # transaction. A failure here rolls the whole packet cancel back - a
+    # cancelled work order with a live Ready step is worse than no cancel.
+    steps_skipped = 0
+    for _v in _victims:
+      cursor.execute("""
+          EXEC dbo.sp_pc_close_wo_routing @work_order_id=%s, @actor=%s, @note=%s
+      """, (_v['work_order_id'], (_actor or 'Production')[:50],
+            'PC cancelled (packet) - routing closed with the work order'))
+      proc = cursor.fetchone() or {}
+      if proc.get('status') != 'success':
+        conn.rollback()
+        conn.close()
+        return {'status': 'error',
+                'message': (f"{_v['work_order_number']}: routing close-out failed - "
+                            f"{proc.get('message', 'unknown error')}. Nothing was cancelled.")}
+      steps_skipped += int(proc.get('steps_skipped') or 0)
+
     # Audit each packet cancel (best-effort; never block the cancel).
     try:
-      _actor = _current_actor()
       for _v in _victims:
         log_wo_cancel(cursor, _v['work_order_id'], _v['work_order_number'],
                       sales_order_number, sales_order_rel, _v['status'],
@@ -1198,11 +1051,16 @@ def cancel_so_work_orders(sales_order_number, sales_order_rel):
 
     conn.commit()
     conn.close()
+    msg = f"Cancelled {eligible_count} work order{'s' if eligible_count != 1 else ''}"
+    if steps_skipped:
+      msg += (f"; skipped {steps_skipped} open routing step"
+              f"{'s' if steps_skipped != 1 else ''}")
     return {
       'status': 'success',
       'cancelled': eligible_count,
       'skipped': skipped_count,
-      'message': f"Cancelled {eligible_count} work order{'s' if eligible_count != 1 else ''}"
+      'routing_steps_skipped': steps_skipped,
+      'message': msg
     }
 
   except Exception as e:

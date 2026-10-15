@@ -69,9 +69,12 @@ Created: 2026-10-06
 """
 
 # =============================================================================
-# Version:       1.2.0
+# Version:       1.2.1
 # Last updated:  2026-10-13
 # Changelog (this module only):
+#   1.2.1 (2026-10-15) Release resumes an un-released order: readies the first OPEN
+#                      group instead of refusing a routing with recorded work
+#                      (auto-completed F / P stay Complete). Action 'Release (resume)'.
 #   1.2.0 (2026-10-14) Auto-complete at release for departments with no board
 #                      yet (global_parameters pc_auto_complete_<code> = 1,
 #                      migration 111; F and P today) - the Ready step completes
@@ -105,7 +108,7 @@ Created: 2026-10-06
 #                      work_order_dashboard and work_order_packet_pdf).
 # =============================================================================
 
-__version__       = "1.2.0"
+__version__       = "1.2.1"
 __version_date__  = "2026-10-13"
 __version_notes__ = ("Default routing (108) + parameter-switched auto-complete of boardless "
                      "departments at release (111); Quick Release source")
@@ -978,12 +981,23 @@ def _release_on_cursor(cursor, wo, actor, source, recip_cache):
   if not steps:
     return {'status': 'error',
             'message': f"{wo['work_order_number']} has no saved routing. Save a routing first."}
-  if _worked_count(cursor, work_order_id) > 0:
-    return {'status': 'error',
-            'message': 'This routing has recorded work; it cannot be released again from here.'}
 
-  first_seq = min(s['sequence_number'] for s in steps)
+  # The first OPEN group is what release readies. For a fresh routing that is
+  # step 1. For an order that was un-released after work was recorded (v1.0's
+  # UnRelease leaves the steps as they were; auto-completed F / P stay
+  # Complete) it is the first group that is not Complete / Skipped, so a
+  # re-release RESUMES where the order stood instead of being refused
+  # (1.2.1: six orders were un-released on 2026-10-15 and could not be
+  # released again).
+  open_steps = [s for s in steps if s['status'] not in (STATUS_COMPLETE, STATUS_SKIPPED)]
+  if not open_steps:
+    return {'status': 'error',
+            'message': (f"{wo['work_order_number']}: every routing step is already complete - "
+                        f"nothing to release. Mark the work order Complete instead.")}
+  first_seq = min(s['sequence_number'] for s in open_steps)
   first_steps = [s for s in steps if s['sequence_number'] == first_seq]
+  resumed = any(s['status'] in (STATUS_COMPLETE, STATUS_SKIPPED) for s in steps) or \
+  any(s['status'] in (STATUS_READY, STATUS_IN_PROGRESS) for s in first_steps)
   readied = []
   for s in first_steps:
     if s['status'] == STATUS_PENDING:
@@ -1019,7 +1033,7 @@ def _release_on_cursor(cursor, wo, actor, source, recip_cache):
     return {'status': 'error',
             'message': (f"{wo['work_order_number']} changed status before it could be "
                         f"released. Refresh and try again.")}
-  _log_action(cursor, wo, 'Release', source, WO_CREATED, WO_RELEASED, actor)
+  _log_action(cursor, wo, 'Release' if not resumed else 'Release (resume)', source, WO_CREATED, WO_RELEASED, actor)
 
   # Departments with no board yet (global_parameters pc_auto_complete_<code> = 1):
   # their Ready steps complete here, in the same transaction, so the order
@@ -1036,6 +1050,7 @@ def _release_on_cursor(cursor, wo, actor, source, recip_cache):
     'texts': texts,
     'auto_completed': auto_done,
     'next_ready': next_ready,
+    'resumed': bool(resumed),
     'route_summary': _route_summary(steps),
     'released_at': datetime.now().isoformat(),
   }
