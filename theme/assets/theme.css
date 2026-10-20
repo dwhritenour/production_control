@@ -1082,3 +1082,33 @@ padding-top: 4px !important;
 padding-left: 4px !important;
 padding-right: 4px !important;
 }
+
+/* ---- Work Orders grid: freeze the first three columns (PC request 2026-10-20) ----
+WO# (JKSDUP, 200px) | SO#/Rel#/Item# (OJLQEN, 160px) | Quick Release (NEORKT, 180px)
+stay put while the grid scrolls horizontally. If a column width is changed in the
+designer, change the matching left: value here. */
+.anvil-role-horizontal-scroll .data-row-col[data-grid-col-id="JKSDUP"],
+.anvil-role-horizontal-scroll .data-row-col[data-grid-col-id="OJLQEN"],
+.anvil-role-horizontal-scroll .data-row-col[data-grid-col-id="NEORKT"] {
+  position: sticky;
+  z-index: 2;
+  background: inherit;   /* take the ROW's colour (code sets the row shading) */
+}
+/* Rows with no colour set in code are transparent; give them the page colour so the
+frozen cells (which inherit it) stay opaque. Inline row colours from code win over this. */
+.anvil-role-horizontal-scroll .anvil-data-row-panel {
+  background-color: %color:Background%;
+}
+.anvil-role-horizontal-scroll .data-row-col[data-grid-col-id="JKSDUP"] { left: 0; }
+.anvil-role-horizontal-scroll .data-row-col[data-grid-col-id="OJLQEN"] { left: 200px; }
+.anvil-role-horizontal-scroll .data-row-col[data-grid-col-id="NEORKT"] {
+  left: 360px;
+  box-shadow: 2px 0 0 %color:Surface Variant%;   /* edge of the frozen block */
+}
+/* Header cells keep the header's own tint so they stay opaque while scrolling. */
+.anvil-role-horizontal-scroll div.auto-grid-header .data-row-col[data-grid-col-id="JKSDUP"],
+.anvil-role-horizontal-scroll div.auto-grid-header .data-row-col[data-grid-col-id="OJLQEN"],
+.anvil-role-horizontal-scroll div.auto-grid-header .data-row-col[data-grid-col-id="NEORKT"] {
+  z-index: 3;
+  background: linear-gradient(0deg, %color:Primary Overlay 2%, %color:Primary Overlay 2%), %color:Background%;
+}
