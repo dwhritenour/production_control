@@ -13,7 +13,7 @@ class ChangeHistoryDetail(ChangeHistoryDetailTemplate):
     self.init_components(**properties)
     self._item = item
     self._populate()
-    
+
 
   def _populate(self):
     """Fetch and display change history."""
@@ -102,6 +102,12 @@ class ChangeHistoryDetail(ChangeHistoryDetailTemplate):
         self.lbl_summary.text = "All changes acknowledged"
         # Signal the parent to refresh the grid
         self.raise_event('x-close')
+        # PC request 2026-10-20: close the popup on acknowledge instead of
+        # making the user click Close as a second step. 'x-close-alert' is
+        # Anvil's built-in: it dismisses the alert() this form is sitting
+        # in; the parent's x-close handler above has already flagged the
+        # grid refresh, which runs when alert() returns.
+        self.raise_event('x-close-alert', value=True)
       else:
         alert(f"Error: {result.get('message', 'Unknown error')}")
 
