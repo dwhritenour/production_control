@@ -77,13 +77,41 @@ def step_codes(steps, dept_codes):
   return codes
 
 
+def _crew_count(crew, dept_code):
+  """People on the work order today in a department, from get_wo_routing's
+  crew dict: A = assemblers PC planned (the Daily Plan instruction),
+  B = screen / element fabricators who tapped it today. None when unknown."""
+  c = (crew or {}).get(dept_code) or {}
+  if dept_code == 'A':
+    return c.get('planned')
+  if dept_code == 'B':
+    return c.get('active')
+  return None
+
+
+def _crew_text(crew, dept_code):
+  """The words for the step list (colour / glyph never alone)."""
+  c = (crew or {}).get(dept_code) or {}
+  if dept_code == 'A' and c.get('planned') is not None:
+    n = c['planned']
+    txt = (f"{n:g} assembler{'s' if n != 1 else ''} planned today (Daily Plan"
+           + (f", {c['planned_by']}" if c.get('planned_by') else '') + ')')
+    if c.get('assigned_who'):
+      txt += f" · assigned: {c['assigned_who']}"
+    return txt
+  if dept_code == 'B' and c.get('active'):
+    n = c['active']
+    return f"{n} fabricator{'s' if n != 1 else ''} on it today ({c.get('operators') or ''})"
+  return ''
+
+
 def _esc(text):
   """Minimal escaping for text dropped into SVG (notes are free text)."""
   return (str(text).replace('&', '&amp;').replace('<', '&lt;')
     .replace('>', '&gt;').replace('"', '&quot;'))
 
 
-def build_routing_svg(departments, steps, dept_codes, statuses=None):
+def build_routing_svg(departments, steps, dept_codes, statuses=None, crew=None):
   """Swim-lane routing diagram (Dave's sample, 2026-07-22): one lane per
   department (ALL lanes, always - spatial consistency), flow top to
   bottom, nodes carry A01.01 codes. `steps` must already be sorted by
@@ -132,6 +160,13 @@ def build_routing_svg(departments, steps, dept_codes, statuses=None):
         # Status overlay (grid popup): decoration only - the word is in
         # the step list under the diagram (color never alone).
         sw, dash, label = 1.5, '', code
+        # 2026-10-28 (Dave): the crew cue - '(2) A04.01' when more than
+        # one person is on the work order today in this department
+        # (A: assemblers PC planned, B: fabricators tapping). Display
+        # only; the routing itself never carries the count.
+        n_crew = _crew_count(crew, d.get('dept_code'))
+        if n_crew and n_crew > 1:
+          label = f"({n_crew:g}) {code}"
         if st == 'Complete':
           label = '✓ ' + code
         elif st == 'In Progress':
@@ -244,8 +279,9 @@ def show_routing_popup(work_order_id, work_order_number='', part_number=''):
     hdr += "   |   all steps complete"
   panel.add_component(Label(text=hdr, bold=True))
 
+  crew = result.get('crew') or {}
   panel.add_component(HtmlTemplate(
-    html=build_routing_svg(departments, steps, dept_codes, statuses)))
+    html=build_routing_svg(departments, steps, dept_codes, statuses, crew)))
 
   # Step list: the WORD for every status (color never alone).
   for s, code, r in zip(steps, codes, rows):
@@ -256,6 +292,9 @@ def show_routing_popup(work_order_id, work_order_number='', part_number=''):
       line += f"   —   {st}"
     if note:
       line += f"   ·   {note}"
+    ct = _crew_text(crew, dept_codes.get(s['department_id']))
+    if ct:
+      line += f"   ·   {ct}"
     lbl = Label(text=line, font_size=12,
                 foreground=_STEP_STATUS_COLORS.get(st, '#333333'))
     try:

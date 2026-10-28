@@ -500,6 +500,39 @@ def save_routing_template(part_number, steps, actor=None):
 # GET WO ROUTING (status panel)
 # =============================================================================
 
+def _wo_crew_today(cursor, work_order_id):
+  """{'A': {'planned': n or None, 'planned_by': str, 'assigned': n, 'assigned_who': str},
+      'B': {'active': n, 'operators': 'OP2+OP9'}} for the work order today.
+  Keyed by dept_code (pc_departments: A = Assemble, B = SE Department)."""
+  cursor.execute("""
+      SELECT
+        (SELECT TOP 1 v.assemblers_planned FROM dbo.vw_assembly_wo_crew_plan v
+         WHERE v.work_order_id = w.work_order_id AND v.is_today = 1)            AS asm_planned,
+        (SELECT TOP 1 v.set_by FROM dbo.vw_assembly_wo_crew_plan v
+         WHERE v.work_order_id = w.work_order_id AND v.is_today = 1)            AS asm_planned_by,
+        NULLIF(LTRIM(RTRIM(w.assigned_assembler)), '')                         AS asm_assigned,
+        (SELECT COUNT(DISTINCT e.operator) FROM dbo.work_order_events e
+         WHERE e.work_order_id = w.work_order_id
+           AND CAST(e.event_at AS DATE) = CAST(GETDATE() AS DATE)
+           AND e.event_type IN ('Start', 'Restart', 'Count', 'Complete')
+           AND e.operator IN (SELECT operator_code FROM dbo.screen_operators))  AS se_active,
+        (SELECT STRING_AGG(x.operator, '+') FROM
+           (SELECT DISTINCT e.operator FROM dbo.work_order_events e
+            WHERE e.work_order_id = w.work_order_id
+              AND CAST(e.event_at AS DATE) = CAST(GETDATE() AS DATE)
+              AND e.event_type IN ('Start', 'Restart', 'Count', 'Complete')
+              AND e.operator IN (SELECT operator_code FROM dbo.screen_operators)) x) AS se_operators
+      FROM dbo.work_orders w WHERE w.work_order_id = %s
+  """, (work_order_id,))
+  r = cursor.fetchone()
+  if not r:
+    return {}
+  planned = float(r['asm_planned']) if r['asm_planned'] is not None else None
+  return {'A': {'planned': planned, 'planned_by': r['asm_planned_by'],
+                'assigned': 1 if r['asm_assigned'] else 0, 'assigned_who': r['asm_assigned']},
+          'B': {'active': int(r['se_active'] or 0), 'operators': r['se_operators']}}
+
+
 @anvil.server.callable
 @perf_probe.timed
 def get_wo_routing(work_order_id):
@@ -541,8 +574,19 @@ def get_wo_routing(work_order_id):
     all_complete = bool(active) and all(
       r['status'] == STATUS_COMPLETE for r in active)
 
+    # 2026-10-28 (Dave): the crew cue on the routing popup - how many people
+    # are on the work order TODAY, per department, computed at display time
+    # (never written into the routing). A = assemblers PC planned on the
+    # Daily Plan's Multi-day Work Order page (vw_assembly_wo_crew_plan, 123,
+    # an instruction to the Assembly board) and who the Supervisor board has
+    # assigned (one person until the board gets a crew table); B = screen /
+    # element fabricators who tapped the work order today (Screen kiosk,
+    # work_order_events). Read-only; one owner per table.
+    crew = _wo_crew_today(cursor, work_order_id)
+
     return {'status': 'success', 'steps': steps,
-            'oos_count': oos_count, 'all_complete': all_complete}
+            'oos_count': oos_count, 'all_complete': all_complete,
+            'crew': crew}
   finally:
     conn.close()
 
