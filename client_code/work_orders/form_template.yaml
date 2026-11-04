@@ -222,7 +222,7 @@ components:
     spacing:
       margin: ['5', null, null, null]
       padding: ['8', null, null, null]
-    text: Production Control v2.0
+    text: Production Control v2.1
   type: Label
 - layout_properties: {slot: left-nav}
   name: nav

@@ -332,11 +332,23 @@ def save_wo_routing(work_order_id, steps, actor=None):
     effective_qty = wo['wo_override_qty'] or wo['quantity']
 
     # Guard: no wholesale replace once work has been recorded.
+    # 2026-11-04: steps completed by the Desk's AUTO-complete (routing_desk
+    # AUTO_ACTOR - F / P while those departments have no board) are NOT
+    # recorded work: nobody on the floor touched them. Counting them locked
+    # PC out of fixing WO-2026-1626336 (an element-only part on the
+    # *STANDARD default) three minutes after release. A step counts as
+    # worked only if it is In Progress, or Complete / has quantity with a
+    # Start or Complete event by someone other than the auto-completer.
     cursor.execute("""
         SELECT COUNT(*) AS worked
-        FROM dbo.pc_wo_routing_steps
-        WHERE work_order_id = %s
-          AND (status IN (%s, %s) OR qty_completed > 0)
+        FROM dbo.pc_wo_routing_steps s
+        WHERE s.work_order_id = %s
+          AND (s.status = %s
+               OR ((s.status = %s OR s.qty_completed > 0)
+                   AND EXISTS (SELECT 1 FROM dbo.pc_wo_routing_step_events e
+                               WHERE e.wo_step_id = s.wo_step_id
+                                 AND e.event_type IN ('Start', 'Complete')
+                                 AND e.event_by <> 'AUTO (no board yet)')))
     """, (work_order_id, STATUS_IN_PROGRESS, STATUS_COMPLETE))
     if cursor.fetchone()['worked'] > 0:
       return {'status': 'error',
@@ -501,8 +513,8 @@ def save_routing_template(part_number, steps, actor=None):
 # =============================================================================
 
 def _wo_crew_today(cursor, work_order_id):
-  """{'A': {'planned': n or None, 'planned_by': str, 'assigned': n, 'assigned_who': str},
-      'B': {'active': n, 'operators': 'OP2+OP9'}} for the work order today.
+  """{'A': {'planned': n or None, 'planned_by': str, 'assigned': n, 'assigned_who': 'ASM9*+ASM3'},
+      'B': {'active': n, 'operators': 'OP2+OP9'}} for the work order today (* = lead).
   Keyed by dept_code (pc_departments: A = Assemble, B = SE Department)."""
   cursor.execute("""
       SELECT
@@ -511,6 +523,11 @@ def _wo_crew_today(cursor, work_order_id):
         (SELECT TOP 1 v.set_by FROM dbo.vw_assembly_wo_crew_plan v
          WHERE v.work_order_id = w.work_order_id AND v.is_today = 1)            AS asm_planned_by,
         NULLIF(LTRIM(RTRIM(w.assigned_assembler)), '')                         AS asm_assigned,
+        (SELECT COUNT(*) FROM dbo.work_order_assemblers a
+         WHERE a.work_order_id = w.work_order_id AND a.removed_at IS NULL)      AS crew_n,
+        (SELECT STRING_AGG(a.operator_code + CASE WHEN a.is_lead = 1 THEN '*' ELSE '' END, '+')
+         FROM dbo.work_order_assemblers a
+         WHERE a.work_order_id = w.work_order_id AND a.removed_at IS NULL)      AS crew_who,
         (SELECT COUNT(DISTINCT e.operator) FROM dbo.work_order_events e
          WHERE e.work_order_id = w.work_order_id
            AND CAST(e.event_at AS DATE) = CAST(GETDATE() AS DATE)
@@ -528,8 +545,14 @@ def _wo_crew_today(cursor, work_order_id):
   if not r:
     return {}
   planned = float(r['asm_planned']) if r['asm_planned'] is not None else None
+  # 124 (Chuck, 10-28): the crew on the work order - lead (*) + helpers in
+  # work_order_assemblers; assigned_assembler stays the lead
+  crew_n = int(r['crew_n'] or 0)
+  who = r['crew_who'] or r['asm_assigned']
+  if crew_n == 0 and r['asm_assigned']:
+    crew_n = 1
   return {'A': {'planned': planned, 'planned_by': r['asm_planned_by'],
-                'assigned': 1 if r['asm_assigned'] else 0, 'assigned_who': r['asm_assigned']},
+                'assigned': crew_n, 'assigned_who': who},
           'B': {'active': int(r['se_active'] or 0), 'operators': r['se_operators']}}
 
 
@@ -578,8 +601,8 @@ def get_wo_routing(work_order_id):
     # are on the work order TODAY, per department, computed at display time
     # (never written into the routing). A = assemblers PC planned on the
     # Daily Plan's Multi-day Work Order page (vw_assembly_wo_crew_plan, 123,
-    # an instruction to the Assembly board) and who the Supervisor board has
-    # assigned (one person until the board gets a crew table); B = screen /
+    # an instruction to the Assembly board) and the crew the Supervisor board
+    # assigned (work_order_assemblers, 124: lead + helpers); B = screen /
     # element fabricators who tapped the work order today (Screen kiosk,
     # work_order_events). Read-only; one owner per table.
     crew = _wo_crew_today(cursor, work_order_id)
