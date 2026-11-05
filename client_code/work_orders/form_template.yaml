@@ -159,6 +159,42 @@ components:
           padding: [null, '4', null, '4']
         text: 'Plan: 0'
       type: Link
+    - components: []
+      layout_properties: {}
+      name: lk_rush_count
+      properties:
+        bold: true
+        border: '1px solid #E65100'
+        foreground: '#E65100'
+        role: null
+        spacing:
+          padding: [null, '4', null, '4']
+        text: 'Rush: 0'
+      type: Link
+    - components: []
+      layout_properties: {}
+      name: lk_allocated_count
+      properties:
+        bold: true
+        border: '1px solid #00897B'
+        foreground: '#00897B'
+        role: null
+        spacing:
+          padding: [null, '4', null, '4']
+        text: 'Allocated: 0'
+      type: Link
+    - components: []
+      layout_properties: {}
+      name: lk_entered_count
+      properties:
+        bold: true
+        border: '1px solid #6D4C41'
+        foreground: '#6D4C41'
+        role: null
+        spacing:
+          padding: [null, '4', null, '4']
+        text: 'Entered: 0'
+      type: Link
     - layout_properties: {}
       name: lbl_record_count
       properties: {align: right, font_size: 12, foreground: '#888888', icon: 'fa:arrow-right', text: 0 work orders}

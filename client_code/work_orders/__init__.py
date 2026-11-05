@@ -13,6 +13,17 @@ PLAN_CARD_COLOR = '#1B5E20'
 # so both work-order forms stay identical. Blank it to fall back to plain Links.
 CHIP_ROLE = 'count-chip'
 
+# e21 line-status chips (2026-11-05, PC meeting: "what do I focus on next?").
+# attr -> (so_status value sent to get_work_orders, colour). One at a time;
+# click again to clear. Colours in code (house rule): Rush = the condensed
+# form's deep orange; Allocated = teal (stock is set aside, go build);
+# Entered = brown (nothing committed yet, the far backlog).
+SO_CHIPS = {
+  'lk_rush_count':      ('Rush',      '#E65100'),   # deep orange
+  'lk_allocated_count': ('Allocated', '#00897B'),   # teal
+  'lk_entered_count':   ('Entered',   '#6D4C41'),   # brown
+}
+
 
 SORT_MAP = {
   'Plan (position)': 'plan_sort',
@@ -25,11 +36,18 @@ SORT_MAP = {
 
 
 class work_orders(work_ordersTemplate):
-  def __init__(self, search_text=None, **properties):
+  def __init__(self, search_text=None, so_status=None, exception_mode=False, **properties):
     # Set Form properties and Data Bindings.
     self.init_components(**properties)
     self.grid_work_orders.role = ['tonal-data-grid', 'horizontal-scroll']
-    self.nav.active = 'work_orders'
+    self.nav.active = 'exceptions' if exception_mode else 'work_orders'
+
+    # e21 line filter (2026-11-05): None | 'Rush' | 'Allocated' | 'Entered'
+    # | 'Hold'. The Exceptions form opens this grid with 'Hold' and
+    # exception_mode=True - same grid, same row template, held lines only.
+    self._so_filter = so_status
+    self._exception_mode = bool(exception_mode)
+    self._wire_so_filters()
 
     # Sort state
     self._sort_key = None
@@ -79,6 +97,15 @@ class work_orders(work_ordersTemplate):
     # the initial load stays well under the payload size that broke after
     # the all-WO expansion (Dave's pick over an Active-only default).
     self.dd_status_filter.selected_value = 'Created'
+    if self._exception_mode:
+      # Exceptions (2026-11-05): every held line, whatever the WO status;
+      # the chips and the status dropdown stay usable but start wide open.
+      self.dd_status_filter.selected_value = None
+      self.cb_active_only.checked = True
+      try:
+        self.lbl_title.text = 'Exceptions - sales-order lines on Hold'
+      except Exception:
+        pass
 
     # Load initial data
     self.refresh_data()
@@ -105,6 +132,7 @@ class work_orders(work_ordersTemplate):
       search_text=search_text,
       active_only=self.cb_active_only.checked,
       backorder_only=self.cb_backorder_only.checked,
+      so_status=self._so_filter,
     )
 
     if result['status'] == 'success':
@@ -139,6 +167,10 @@ class work_orders(work_ordersTemplate):
                                    f"{counts.get('plan_today', 0)} released")
       self._style_plan_link()
       self._style_count_links()
+      for attr, (fval, _c) in SO_CHIPS.items():
+        if hasattr(self, attr):
+          getattr(self, attr).text = f"{fval}: {counts.get(fval.lower(), 0)}"
+      self._style_so_links()
 
       # Update last refreshed
       from datetime import datetime
@@ -158,6 +190,8 @@ class work_orders(work_ordersTemplate):
     self.cb_active_only.checked = False
     self.cb_backorder_only.checked = False
     self._plan_only = False
+    if not self._exception_mode:
+      self._so_filter = None
     self.refresh_data()
 
   # =========================================================================
@@ -354,6 +388,60 @@ class work_orders(work_ordersTemplate):
   def _toggle_plan(self, **event_args):
     self._plan_only = not self._plan_only
     self.refresh_data()
+
+  # =========================================================================
+  # e21 LINE CHIPS  (2026-11-05: Rush / Allocated / Entered, one at a time)
+  # =========================================================================
+  def _wire_so_filters(self):
+    """Links lk_rush_count / lk_allocated_count / lk_entered_count in the
+    summary row. Safe before they exist in the designer. In exception mode
+    the chips are hidden: that form shows held lines and nothing else."""
+    for attr, (fval, color) in SO_CHIPS.items():
+      comp = getattr(self, attr, None)
+      if comp is None:
+        continue
+      if self._exception_mode:
+        try:
+          comp.visible = False
+        except Exception:
+          pass
+        continue
+      for prop, val in (('foreground', color),
+                        ('border', f'1px solid {color}'),
+                        ('bold', True),
+                        ('role', CHIP_ROLE)):
+        if prop == 'role' and not val:
+          continue
+        try:
+          setattr(comp, prop, val)
+        except Exception:
+          pass
+      try:
+        comp.set_event_handler('click', lambda f=fval, **e: self._toggle_so(f))
+      except Exception:
+        pass
+    self._style_so_links()
+
+  def _toggle_so(self, value):
+    self._so_filter = None if self._so_filter == value else value
+    self.refresh_data()
+
+  def _style_so_links(self):
+    for attr, (fval, color) in SO_CHIPS.items():
+      comp = getattr(self, attr, None)
+      if comp is None or self._exception_mode:
+        continue
+      try:
+        comp.bold = True
+        comp.border = f'1px solid {color}'
+        if self._so_filter == fval:
+          comp.background = color
+          comp.foreground = '#FFFFFF'
+        else:
+          comp.background = ''
+          comp.foreground = color
+      except Exception:
+        pass
 
   def _style_plan_link(self):
     if not hasattr(self, 'lk_plan_count'):

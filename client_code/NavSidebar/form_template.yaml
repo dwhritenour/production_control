@@ -57,6 +57,17 @@ components:
     text: Part Master
   type: Button
 - event_bindings: {}
+  layout_properties: {grid_position: 'GLMIMG,OMAGCJ'}
+  name: btn_exceptions
+  properties:
+    enabled: true
+    icon: fa:exclamation-triangle
+    role: elevated-button
+    spacing:
+      padding: [null, '35', null, '35']
+    text: Exceptions
+  type: Button
+- event_bindings: {}
   layout_properties: {grid_position: 'PTGFNG,TIJSHV'}
   name: btn_change_log
   properties:

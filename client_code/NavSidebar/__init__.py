@@ -12,6 +12,7 @@ class NavSidebar(NavSidebarTemplate):
     'sales_orders_due':       'btn_sales_orders',
     'sku_details':            'btn_routing_library',
     'part_master_manager':    'btn_part_master',
+    'exceptions':             'btn_exceptions',     # work_orders in exception mode
   }
 
   # One handler per button -> one open_form target. Defined ONLY here.
@@ -21,6 +22,10 @@ class NavSidebar(NavSidebarTemplate):
     'btn_sales_orders':   'sales_orders_due',
     'btn_routing_library': 'sku_details',
     'btn_part_master':     'part_master_manager',
+    # Exceptions (2026-11-05): the Work Orders grid opened on the e21 lines
+    # on Hold - same grid, same row template, held lines only. A target may
+    # be (form name, kwargs) as well as a bare form name.
+    'btn_exceptions':      ('work_orders', {'so_status': 'Hold', 'exception_mode': True}),
   }
 
   # External apps -> open in a NEW TAB. open_form only navigates within
@@ -51,7 +56,10 @@ class NavSidebar(NavSidebarTemplate):
 
   def _make_nav_handler(self, target_form):
     def handler(**event_args):
-      open_form(target_form)
+      if isinstance(target_form, tuple):
+        open_form(target_form[0], **target_form[1])
+      else:
+        open_form(target_form)
     return handler
 
   def _make_external_handler(self, url):

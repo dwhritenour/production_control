@@ -40,6 +40,14 @@ notes columns nobody reads until they click):
 migration 084. The 09-17 version looped in Python, two statements per open
 step; on 09-23 Accept Orphans hit 228 open steps (~456 round trips) and
 died on Anvil's 30 s call limit. Each caller is now ONE EXEC.
+2026-11-05 (PC meeting - "what do I focus on next?"):
+  - get_work_orders(so_status=...): 'Rush' | 'Allocated' | 'Entered' |
+    'Hold' filters on the e21 line (rush = PC's carrier+method rule, the
+    others = sales_orders_due.nx_item_status_desc). Three count chips on
+    the Work Orders form drive it; counts['allocated' / 'entered' / 'hold'].
+  - HELD LINES LEAVE THE WORK ORDERS GRID: unless so_status='Hold' is
+    asked for, a work order whose e21 line is on Hold is not returned and
+    not counted in the status cards. The Exceptions form shows them.
 2026-10-06 (Production Control v2.0, Routing Desk slice 1):
   - RELEASE IS GUARDED: update_work_order_status('Released') now delegates to
     routing_desk.release_work_order, so no path can put a work order on the
@@ -174,7 +182,7 @@ def _plan_label(tier, position, plan_date_str, on_today):
 
 @anvil.server.callable
 @perf_probe.timed
-def get_work_orders(status_filter=None, search_text=None, active_only=False, backorder_only=False, statuses=None, show_rush_only=False, limit=4000):
+def get_work_orders(status_filter=None, search_text=None, active_only=False, backorder_only=False, statuses=None, show_rush_only=False, limit=4000, so_status=None):
   """
     Fetch work orders with optional filtering.
 
@@ -188,6 +196,10 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
                         (sales_order_rel <> '001')
         statuses:       optional list of statuses to include (IN filter);
                         used by the condensed Active view
+        so_status:      'Rush' | 'Allocated' | 'Entered' | 'Hold' (2026-11-05):
+                        filter on the e21 sales-order line. Anything but
+                        'Hold' ALSO hides held lines (they live on the
+                        Exceptions form); 'Hold' returns only held lines.
 
     Returns:
         dict with:
@@ -297,6 +309,18 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
 
     if show_rush_only:
       query += " AND " + _sod._rush_bool_sql('so.')
+
+    # 2026-11-05: e21 line-status filters + the hold rule. A held line is
+    # an exception, not work: it never shows on the Work Orders grid.
+    if so_status == 'Hold':
+      query += " AND so.nx_item_status_desc = 'Hold'"
+    else:
+      query += " AND ISNULL(so.nx_item_status_desc, '') <> 'Hold'"
+      if so_status == 'Rush':
+        query += " AND " + _sod._rush_bool_sql('so.')
+      elif so_status in ('Allocated', 'Entered'):
+        query += " AND so.nx_item_status_desc = %s"
+        params.append(so_status)
 
     if search_text:
       query += """ AND (
@@ -416,10 +440,16 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
     # -----------------------------------------------------------------
     # Summary counts (always unfiltered for the cards)
     # -----------------------------------------------------------------
+    # 2026-11-05: held e21 lines are excluded from the cards, as from the grid.
     cursor.execute("""
-        SELECT status, COUNT(*) AS cnt
-        FROM dbo.work_orders
-        GROUP BY status
+        SELECT wo.status, COUNT(*) AS cnt
+        FROM dbo.work_orders wo
+        LEFT JOIN dbo.sales_orders_due so
+          ON wo.sales_order_number = so.nx_order_numb
+         AND CAST(wo.sales_order_line AS VARCHAR) = so.nx_item_no
+         AND wo.sales_order_rel = so.nx_rel_numb
+        WHERE ISNULL(so.nx_item_status_desc, '') <> 'Hold'
+        GROUP BY wo.status
     """)
     counts = {row['status']: row['cnt'] for row in cursor.fetchall()}
 
@@ -451,12 +481,37 @@ def get_work_orders(status_filter=None, search_text=None, active_only=False, bac
                 AND CAST(wo.sales_order_line AS VARCHAR) = so.nx_item_no
                 AND wo.sales_order_rel = so.nx_rel_numb
               WHERE wo.status IN ('Created', 'Released', 'Assigned', 'In Progress', 'Paused')
+                AND ISNULL(so.nx_item_status_desc, '') <> 'Hold'
                 AND {_sod._rush_bool_sql('so.')}) AS rush,
+            (SELECT COUNT(*) FROM dbo.work_orders wo
+               JOIN dbo.sales_orders_due so
+                 ON wo.sales_order_number = so.nx_order_numb
+                AND CAST(wo.sales_order_line AS VARCHAR) = so.nx_item_no
+                AND wo.sales_order_rel = so.nx_rel_numb
+              WHERE wo.status IN ('Created', 'Released', 'Assigned', 'In Progress', 'Paused')
+                AND so.nx_item_status_desc = 'Allocated') AS allocated,
+            (SELECT COUNT(*) FROM dbo.work_orders wo
+               JOIN dbo.sales_orders_due so
+                 ON wo.sales_order_number = so.nx_order_numb
+                AND CAST(wo.sales_order_line AS VARCHAR) = so.nx_item_no
+                AND wo.sales_order_rel = so.nx_rel_numb
+              WHERE wo.status IN ('Created', 'Released', 'Assigned', 'In Progress', 'Paused')
+                AND so.nx_item_status_desc = 'Entered') AS entered,
+            (SELECT COUNT(*) FROM dbo.work_orders wo
+               JOIN dbo.sales_orders_due so
+                 ON wo.sales_order_number = so.nx_order_numb
+                AND CAST(wo.sales_order_line AS VARCHAR) = so.nx_item_no
+                AND wo.sales_order_rel = so.nx_rel_numb
+              WHERE wo.status NOT IN ('Complete', 'Cancelled')
+                AND so.nx_item_status_desc = 'Hold') AS hold,
             {plan_sql}
     """, plan_params)
     _sc = cursor.fetchone() or {}
     counts['PendingChanges'] = _sc.get('pending_changes') or 0
     counts['rush'] = _sc.get('rush') or 0
+    counts['allocated'] = _sc.get('allocated') or 0
+    counts['entered'] = _sc.get('entered') or 0
+    counts['hold'] = _sc.get('hold') or 0
     counts['plan_today'] = _sc.get('plan_today') or 0
     counts['plan_released'] = _sc.get('plan_released') or 0
 
