@@ -136,7 +136,19 @@ class WorkOrdersRowTemplate(WorkOrdersRowTemplateTemplate):
     # 2026-10-15: one cell SO# / Rel# / Item# ('597178-001-10'); the Line column is gone.
     line = self.item.get('sales_order_line')
     so_disp = self.item.get('so_number_display', '') or ''
-    self.link_so_number.text = f"{so_disp}-{line}" if (so_disp and line is not None) else so_disp
+    so_text = f"{so_disp}-{line}" if (so_disp and line is not None) else so_disp
+    # 2026-11-05: rush cue as on the condensed form - '610097-001-10 ⚡' with
+    # the carrier / method in the tooltip. is_rush comes from the server
+    # (PC's carrier+method rule, same source as the Rush chip).
+    if self.item.get('is_rush'):
+      rush_glyph = ' ⚡'
+      if not so_text.endswith(rush_glyph):
+        so_text += rush_glyph
+      carr = (self.item.get('nx_carrier') or '').strip()
+      mos = (self.item.get('nx_mos') or '').strip()
+      label = ' '.join(p for p in (carr, mos) if p)
+      self.link_so_number.tooltip = f"Rush shipment - {label}" if label else "Rush shipment"
+    self.link_so_number.text = so_text
     self.link_so_number.set_event_handler('click', self.show_backorder_detail)
 
     # ---- Routing diagram link (2026-09-12) -----------------------------------
