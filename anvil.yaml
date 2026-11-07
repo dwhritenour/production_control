@@ -11,13 +11,7 @@ runtime_options:
   server_persist: true
   server_spec: {base: python310-minimal}
   version: 3
-scheduled_tasks:
-- job_id: DPLIOZAQ
-  task_name: send_routing_notifications
-  time_spec:
-    at: {}
-    every: minute
-    n: 1
+scheduled_tasks: []
 secrets:
   ANTHROPIC_API_KEY:
     type: secret
